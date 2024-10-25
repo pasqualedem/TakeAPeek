@@ -58,7 +58,7 @@ class OneModel(nn.Module):
     
         PSPNet_ = PSPNet(args)
         backbone_str = 'vgg' if args.vgg else 'resnet'+str(args.layers)
-        weight_path = 'checkpoints/PSPNet/{}/split{}/{}/best.pth'.format(args.data_set, args.split, backbone_str)               
+        weight_path = 'checkpoints/bam/PSPNet/{}/split{}/{}/best.pth'.format(args.data_set, args.split, backbone_str)               
         new_param = torch.load(weight_path, map_location=torch.device('cpu'))['state_dict']
         try: 
             PSPNet_.load_state_dict(new_param)

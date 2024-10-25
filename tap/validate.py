@@ -129,11 +129,11 @@ def get_la(val_fold_idx, **kwargs):
     return model, image_size
 
 
-def get_dcama(*args, **kwargs):
+def get_dcama(val_fold_idx, **kwargs):
     name = "dcama"
     params = dict(
-        backbone_checkpoint="checkpoints/swin_base_patch4_window12_384.pth",
-        model_checkpoint="checkpoints/swin_fold3.pt",
+        backbone_checkpoint="checkpoints/dcama/swin_base_patch4_window12_384.pth",
+        model_checkpoint=f"checkpoints/dcama/swin_fold{val_fold_idx}.pt",
     )
     image_size = 384
     return model_registry[name](**params), image_size

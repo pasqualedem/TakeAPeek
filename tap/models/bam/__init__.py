@@ -89,17 +89,17 @@ def build_bam(shots=1, val_fold_idx=0):
     model = BamModel(args, cls_type="Base")
 
     checkpoint_per_fold_1shot = {
-        0: "checkpoints/coco/split0/res50/train_epoch_43.5_0.4341.pth",
-        1: "checkpoints/coco/split1/res50/train_epoch_48_0.5059.pth",
-        2: "checkpoints/coco/split2/res50/train_epoch_44.5_0.4749.pth",
-        3: "checkpoints/coco/split3/res50/train_epoch_45_0.4342.pth",
+        0: "checkpoints/bam/coco/split0/res50/train_epoch_43.5_0.4341.pth",
+        1: "checkpoints/bam/coco/split1/res50/train_epoch_48_0.5059.pth",
+        2: "checkpoints/bam/coco/split2/res50/train_epoch_44.5_0.4749.pth",
+        3: "checkpoints/bam/coco/split3/res50/train_epoch_45_0.4342.pth",
     }
 
     checkpoint_per_fold_5shot = {
-        0: "checkpoints/coco/split0/res50/train5_epoch_47.5_0.4926.pth",
-        1: "checkpoints/coco/split1/res50/train5_epoch_45.5_0.5420.pth",
-        2: "checkpoints/coco/split2/res50/train5_epoch_45_0.5163.pth",
-        3: "checkpoints/coco/split3/res50/train5_epoch_47_0.4955.pth",
+        0: "checkpoints/bam/coco/split0/res50/train5_epoch_47.5_0.4926.pth",
+        1: "checkpoints/bam/coco/split1/res50/train5_epoch_45.5_0.5420.pth",
+        2: "checkpoints/bam/coco/split2/res50/train5_epoch_45_0.5163.pth",
+        3: "checkpoints/bam/coco/split3/res50/train5_epoch_47_0.4955.pth",
     }
     assert shots in [1, 5]
     checkpoint_per_fold = checkpoint_per_fold_1shot if shots == 1 else checkpoint_per_fold_5shot
