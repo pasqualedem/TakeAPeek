@@ -3,4 +3,4 @@
 conda init zsh
 conda activate label-anything
 export TMPDIR=./tmp
-python main_lora.py $@
+python main.py $@

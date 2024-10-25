@@ -10,7 +10,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --mem=123000
 #SBATCH --exclusive
-#SBATCH --job-name=lora
+#SBATCH --job-name=TaP
 #SBATCH --out=out/lora.log
 #SBATCH --err=out/lora.log
 
