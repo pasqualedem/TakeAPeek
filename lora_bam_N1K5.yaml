@@ -1,0 +1,15 @@
+
+parameters:
+  num_iterations: [8]
+  device: [cuda]
+  lora_r: [64]
+  lr: [0.0001]
+  target_modules: ["conv1,conv3"]
+  lora_dropout: [0.1]
+  val_num_samples: [5000]
+  val_fold_idx: [0, 1, 2, 3]
+  model: [bam]
+  n_ways: [1]
+  k_shots: [5]
+
+other_grids:
