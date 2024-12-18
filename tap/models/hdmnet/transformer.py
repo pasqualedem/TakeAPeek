@@ -5,14 +5,45 @@ import torch.nn as nn
 from mmcv.cnn import Conv2d, build_activation_layer, build_norm_layer, ConvModule
 from mmcv.cnn.bricks.drop import build_dropout
 from mmcv.cnn.bricks.transformer import MultiheadAttention
-from mmcv.cnn.utils.weight_init import constant_init, normal_init,trunc_normal_init
-from mmcv.runner import BaseModule, ModuleList, Sequential
-from mmseg.models.utils import PatchEmbed, nchw_to_nlc, nlc_to_nchw
-from mmseg.ops import resize
+from torch.nn.init import constant_, normal_, trunc_normal_
+from torch.nn.functional import interpolate as resize
+from .embed import PatchEmbed
 from .maskmultiheadattention import MaskMultiHeadAttention
 
 
-class MixFFN(BaseModule):
+# Copyright (c) OpenMMLab. All rights reserved.
+def nchw_to_nlc(x):
+    """Flatten [N, C, H, W] shape tensor to [N, L, C] shape tensor.
+
+    Args:
+        x (Tensor): The input tensor of shape [N, C, H, W] before conversion.
+
+    Returns:
+        Tensor: The output tensor of shape [N, L, C] after conversion.
+    """
+    assert len(x.shape) == 4
+    return x.flatten(2).transpose(1, 2).contiguous()
+
+
+# Copyright (c) OpenMMLab. All rights reserved.
+def nlc_to_nchw(x, hw_shape):
+    """Convert [N, L, C] shape tensor to [N, C, H, W] shape tensor.
+
+    Args:
+        x (Tensor): The input tensor of shape [N, L, C] before conversion.
+        hw_shape (Sequence[int]): The height and width of output feature map.
+
+    Returns:
+        Tensor: The output tensor of shape [N, C, H, W] after conversion.
+    """
+    H, W = hw_shape
+    assert len(x.shape) == 3
+    B, L, C = x.shape
+    assert L == H * W, 'The seq_len doesn\'t match H, W'
+    return x.transpose(1, 2).reshape(B, C, H, W)
+
+
+class MixFFN(nn.Module):
     def __init__(self,
                  embed_dims,
                  feedforward_channels,
@@ -20,7 +51,7 @@ class MixFFN(BaseModule):
                  ffn_drop=0.,
                  dropout_layer=None,
                  init_cfg=None):
-        super(MixFFN, self).__init__(init_cfg)
+        super(MixFFN, self).__init__()
 
         self.embed_dims = embed_dims
         self.feedforward_channels = feedforward_channels
@@ -51,7 +82,7 @@ class MixFFN(BaseModule):
             bias=True)
         drop = nn.Dropout(ffn_drop)
         layers = [fc1, pe_conv, self.activate, drop, fc2, drop]
-        self.layers = Sequential(*layers)
+        self.layers = nn.Sequential(*layers)
         self.dropout_layer = build_dropout(
             dropout_layer) if dropout_layer else torch.nn.Identity()
 
@@ -119,7 +150,7 @@ class EfficientMultiheadAttention(MultiheadAttention):
         return identity + self.dropout_layer(self.proj_drop(out)), weight
 
 
-class TransformerEncoderLayer(BaseModule):
+class TransformerEncoderLayer(nn.Module):
     def __init__(self,
                  embed_dims,
                  num_heads,
@@ -167,7 +198,7 @@ class TransformerEncoderLayer(BaseModule):
         return x, weight
 
 
-class MixVisionTransformer(BaseModule):
+class MixVisionTransformer(nn.Module):
     def __init__(self,
                  shot=1,
                  in_channels=64,
@@ -187,7 +218,7 @@ class MixVisionTransformer(BaseModule):
                  act_cfg=dict(type='GELU'),
                  norm_cfg=dict(type='LN', eps=1e-6),
                  init_cfg=None):
-        super(MixVisionTransformer, self).__init__(init_cfg=init_cfg)
+        super(MixVisionTransformer, self).__init__()
         self.shot = shot
 
         #-------------------------------------------------------- Self Attention for Down Sample ------------------------------------------------------------
@@ -202,7 +233,7 @@ class MixVisionTransformer(BaseModule):
         self.down_sr_ratio = down_sr_ratio
         self.mlp_ratio=mlp_ratio
         self.qkv_bias = qkv_bias
-        self.down_sample_layers = ModuleList()
+        self.down_sample_layers = nn.ModuleList()
         for i in range(num_down_stages):
             self.down_sample_layers.append(nn.ModuleList([
                 PatchEmbed(
@@ -236,9 +267,9 @@ class MixVisionTransformer(BaseModule):
             ]))
 
         #-------------------------------------------------------- Corss Attention for Down Matching ------------------------------------------------------------
-        self.match_layers = ModuleList()
+        self.match_layers = nn.ModuleList()
         for i in range(self.num_down_stages):
-            level_match_layers = ModuleList([
+            level_match_layers = nn.ModuleList([
                 TransformerEncoderLayer(
                     embed_dims=self.match_dims,
                     num_heads=self.match_nums_heads,
@@ -276,14 +307,14 @@ class MixVisionTransformer(BaseModule):
         if self.init_cfg is None:
             for m in self.modules():
                 if isinstance(m, nn.Linear):
-                    trunc_normal_init(m, std=.02, bias=0.)
+                    trunc_normal_(m, std=.02, bias=0.)
                 elif isinstance(m, nn.LayerNorm):
-                    constant_init(m, val=1.0, bias=0.)
+                    constant_(m, val=1.0, bias=0.)
                 elif isinstance(m, nn.Conv2d):
                     fan_out = m.kernel_size[0] * m.kernel_size[
                         1] * m.out_channels
                     fan_out //= m.groups
-                    normal_init(
+                    normal_(
                         m, mean=0, std=math.sqrt(2.0 / fan_out), bias=0)
         else:
             super(MixVisionTransformer, self).init_weights()

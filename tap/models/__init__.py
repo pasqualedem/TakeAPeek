@@ -8,6 +8,7 @@
 from collections import namedtuple
 
 from .bam import build_bam
+from .hdmnet import build_hdmnet
 from .sam import Sam, AdaptedSam
 from .lam import Lam, BinaryLam
 from .image_encoder import ImageEncoderViT
@@ -43,6 +44,7 @@ model_registry = {
     "dcama": build_dcama,
     "fptrans": build_fptrans,
     "bam": build_bam,
+    "hdmnet": build_hdmnet,
     "dummy": build_dummy,
     # Encoders only
     **ENCODERS

@@ -90,10 +90,11 @@ class OneModel(nn.Module):
         self.criterion = nn.CrossEntropyLoss(ignore_index=args.ignore_label)
         self.shot = args.shot
         self.vgg = args.vgg
+        backbone_str = 'vgg' if args.vgg else 'resnet'+str(args.layers)
         models.BatchNorm = BatchNorm
         
         PSPNet_ = PSPNet(args)
-        new_param = torch.load(args.pre_weight, map_location=torch.device('cpu'))['state_dict']
+        new_param = torch.load('checkpoints/bam/PSPNet/{}/split{}/{}/best.pth'.format(args.data_set, args.split, backbone_str)  , map_location=torch.device('cpu'))['state_dict']
         try: 
             PSPNet_.load_state_dict(new_param)
         except RuntimeError:                 
@@ -231,17 +232,17 @@ class OneModel(nn.Module):
         # Following the implementation of BAM ( https://github.com/chunbolang/BAM ) 
         meta_map_bg = meta_out_soft[:,0:1,:,:]                           
         meta_map_fg = meta_out_soft[:,1:,:,:]                            
-        if self.training and self.cls_type == 'Base':
-            c_id_array = torch.arange(self.base_classes+1, device='cuda')
-            base_map_list = []
-            for b_id in range(bs):
-                c_id = cat_idx[0][b_id] + 1
-                c_mask = (c_id_array!=0)&(c_id_array!=c_id)
-                base_map_list.append(base_out_soft[b_id,c_mask,:,:].unsqueeze(0).sum(1,True))
-            base_map = torch.cat(base_map_list,0)
-        else:
-            base_map = base_out_soft[:,1:,:,:].sum(1,True)
-
+        # if self.training and self.cls_type == 'Base':
+        #     c_id_array = torch.arange(self.base_classes+1, device='cuda')
+        #     base_map_list = []
+        #     for b_id in range(bs):
+        #         c_id = cat_idx[0][b_id] + 1
+        #         c_mask = (c_id_array!=0)&(c_id_array!=c_id)
+        #         base_map_list.append(base_out_soft[b_id,c_mask,:,:].unsqueeze(0).sum(1,True))
+        #     base_map = torch.cat(base_map_list,0)
+        # else:
+        #     base_map = base_out_soft[:,1:,:,:].sum(1,True)
+        base_map = base_out_soft[:,1:,:,:].sum(1,True)
         est_map = est_val.expand_as(meta_map_fg)
 
         meta_map_bg = self.gram_merge(torch.cat([meta_map_bg,est_map], dim=1))
@@ -257,24 +258,25 @@ class OneModel(nn.Module):
         base_out = F.interpolate(base_out, size=(h, w), mode='bilinear', align_corners=True)
         final_out = F.interpolate(final_out, size=(h, w), mode='bilinear', align_corners=True)
  
-        # Loss
-        if self.training:
-            main_loss = self.criterion(final_out, y_m.long())
-            aux_loss1 = self.criterion(meta_out, y_m.long())
-            aux_loss2 = self.criterion(base_out, y_b.long())
+        # # Loss
+        # if self.training:
+        #     main_loss = self.criterion(final_out, y_m.long())
+        #     aux_loss1 = self.criterion(meta_out, y_m.long())
+        #     aux_loss2 = self.criterion(base_out, y_b.long())
             
-            weight_t = (y_m == 1).float()
-            weight_t = torch.masked_fill(weight_t, weight_t == 0, -1e9)
-            for i, weight in enumerate(weights):
-                if i == 0:
-                    distil_loss = self.disstil_loss(weight_t, weight)
-                else:
-                    distil_loss += self.disstil_loss(weight_t, weight)
-                weight_t = weight.detach() 
+        #     weight_t = (y_m == 1).float()
+        #     weight_t = torch.masked_fill(weight_t, weight_t == 0, -1e9)
+        #     for i, weight in enumerate(weights):
+        #         if i == 0:
+        #             distil_loss = self.disstil_loss(weight_t, weight)
+        #         else:
+        #             distil_loss += self.disstil_loss(weight_t, weight)
+        #         weight_t = weight.detach() 
              
-            return final_out.max(1)[1], main_loss + aux_loss1, distil_loss / 3, aux_loss2
-        else:
-            return final_out, meta_out, base_out 
+        #     return final_out.max(1)[1], main_loss + aux_loss1, distil_loss / 3, aux_loss2
+        # else:
+        #     return final_out, meta_out, base_out 
+        return final_out
     
     def disstil_loss(self, t, s):
         if t.shape[-2:] != s.shape[-2:]:
@@ -320,17 +322,16 @@ class OneModel(nn.Module):
     
     def extract_feats(self, x, mask=None):
         results = []
-        with torch.no_grad():
-            if mask is not None:
-                tmp_mask = F.interpolate(mask, size=x.shape[-2], mode='nearest')
-                x = x * tmp_mask
-            feat = self.layer0(x)
-            results.append(feat)
-            layers = [self.layer1, self.layer2, self.layer3, self.layer4]
-            for _, layer in enumerate(layers):
-                feat = layer(feat)
-                results.append(feat.clone())
-            feat = self.ppm(feat)
-            feat = self.cls(feat)
-            results.append(feat)
+        if mask is not None:
+            tmp_mask = F.interpolate(mask, size=x.shape[-2], mode='nearest')
+            x = x * tmp_mask
+        feat = self.layer0(x)
+        results.append(feat)
+        layers = [self.layer1, self.layer2, self.layer3, self.layer4]
+        for _, layer in enumerate(layers):
+            feat = layer(feat)
+            results.append(feat.clone())
+        feat = self.ppm(feat)
+        feat = self.cls(feat)
+        results.append(feat)
         return results

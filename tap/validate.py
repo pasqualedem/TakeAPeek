@@ -52,8 +52,8 @@ dataset_args = {
             "split": "val",
             "val_fold_idx": 3,
             "n_folds": 4,
-            "n_shots": 5,
-            "n_ways": 2,
+            "n_shots": 1,
+            "n_ways": 1,
             "do_subsample": False,
             "add_box_noise": False,
             "val_num_samples": 100,
@@ -151,11 +151,24 @@ def get_bam(k_shots, val_fold_idx, **kwargs):
     return bam, image_size
 
 
+def get_hdmnet(k_shots, val_fold_idx, **kwargs):
+    name = "hdmnet"
+    params = dict(
+        shots=k_shots,
+        val_fold_idx=val_fold_idx,
+    )
+    image_size = 641
+    bam = model_registry[name](**params)
+    set_batchnorm_eval_mode(bam)
+    return bam, image_size
+
+
 def get_model(model_name, **kwargs):
     supported_models = {
         "label_anything": get_la,
         "dcama": get_dcama,
         "bam": get_bam,
+        "hdmnet": get_hdmnet,
     }
     return supported_models[model_name](**kwargs)
 
