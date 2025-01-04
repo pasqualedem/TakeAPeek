@@ -39,37 +39,63 @@ class HDMNetModel(OneModel):
                 for i, mask in enumerate(logits)
             ]
         )
+        # set padding to background class
+        logits[:, 0, :, :][logits[:, 0, :, :] == float("-inf")] = 0
         return logits
     
     def forward(self, batch: dict):
-        # remove bg from masks
-        masks = batch[BatchKeys.PROMPT_MASKS][:, :, 1:, ::]
-        y_m = None
-        y_b = None
-        cat_idx = None
+        # Remove background from masks
+        masks = batch[BatchKeys.PROMPT_MASKS][:, :, 1:]
+        y_m, y_b, cat_idx = None, None, None
         logits = []
-        # get logits for each class
+
+        # Iterate over each class to compute logits
         for c in range(masks.size(2)):
+            # Extract class-specific examples and data
             class_examples = batch[BatchKeys.FLAG_EXAMPLES][:, :, c + 1]
             x = batch[BatchKeys.IMAGES][:, 0]
             s_x = batch[BatchKeys.IMAGES][:, 1:][class_examples].unsqueeze(0)
-            s_y = masks[:, :, c, ::][class_examples].unsqueeze(0)
+            s_y = masks[:, :, c][class_examples].unsqueeze(0)
+            
+            # Count the number of shots
             n_shots = class_examples.sum().item()
-            if n_shots < self.shot: # if n_shots < self.shot repeat the last image and mask
-                s_x = torch.cat([s_x, s_x[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1, 1)], dim=1)
-                s_y = torch.cat([s_y, s_y[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1)], dim=1)
-            logits.append(super().forward(x, s_x=s_x, s_y=s_y, y_m=y_m, y_b=y_b, cat_idx=cat_idx))
+            
+            # Handle fewer shots than required
+            if n_shots < self.shot:
+                s_x = torch.cat(
+                    [s_x, s_x[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1, 1)],
+                    dim=1
+                )
+                s_y = torch.cat(
+                    [s_y, s_y[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1)],
+                    dim=1
+                )
+            
+            # Append the logits computed for this class
+            class_logits = super().forward(x, s_x=s_x, s_y=s_y, y_m=y_m, y_b=y_b, cat_idx=cat_idx)
+            logits.append(class_logits)
+        
+        # Stack logits across all classes
         logits = torch.stack(logits, dim=1)
-        fg_logits = logits[:, :, 1, ::]
-        bg_logits = logits[:, :, 0, ::]
+
+        # Separate foreground and background logits
+        fg_logits = logits[:, :, 1].clone()
+        bg_logits = logits[:, :, 0].clone()
+
+        # Determine background positions
         bg_positions = fg_logits.argmax(dim=1)
         bg_logits = torch.gather(bg_logits, 1, bg_positions.unsqueeze(1))
+
+        # Combine background and foreground logits
         logits = torch.cat([bg_logits, fg_logits], dim=1)
+
+        # Postprocess the logits
         logits = self.postprocess_masks(logits, batch["dims"])
 
         return {
             ResultDict.LOGITS: logits,
         }
+
         
         
 def build_hdmnet(shots=1, val_fold_idx=0):

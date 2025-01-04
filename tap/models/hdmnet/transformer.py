@@ -354,7 +354,7 @@ class MixVisionTransformer(nn.Module):
                 mask=down_masks[i], 
                 cross=True)
             out = nlc_to_nchw(out, hw_shapes[i])
-            weight = weight.view(out.shape[0], hw_shapes[i][0], hw_shapes[i][1])
+            weight = rearrange(weight, 'b (h w) -> b h w', h=hw_shapes[i][0], w=hw_shapes[i][1])
             out = layer[1](torch.cat([out, down_similarity[i]], dim=1))
             weights.append(weight)
             # print(layer_out.shape) 

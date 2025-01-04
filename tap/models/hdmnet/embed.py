@@ -303,7 +303,7 @@ class PatchMerging(nn.Module):
         H, W = input_size
         assert L == H * W, 'input feature has wrong size'
 
-        x = x.view(B, H, W, C).permute([0, 3, 1, 2])  # B, C, H, W
+        x = x.view(B, H, W, C).permute([0, 3, 1, 2]).contiguous()  # B, C, H, W
         # Use nn.Unfold to merge patch. About 25% faster than original method,
         # but need to modify pretrained model for compatibility
 

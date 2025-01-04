@@ -16,22 +16,37 @@ def Weighted_GAP(supp_feat, mask):
     return supp_feat
 
 def get_similarity(q, s, mask):
+    # Ensure mask is correctly shaped
     if len(mask.shape) == 3:
         mask = mask.unsqueeze(1)
-    mask = F.interpolate((mask == 1).float(), q.shape[-2:])
-    cosine_eps = 1e-7
+    
+    # Interpolate mask to match query spatial dimensions
+    mask = F.interpolate((mask == 1).float(), size=q.shape[-2:])
+    
+    # Apply mask to support tensor
     s = s * mask
-    bsize, ch_sz, sp_sz, _ = q.size()[:]
-    tmp_query = q
-    tmp_query = tmp_query.contiguous().view(bsize, ch_sz, -1)
-    tmp_query_norm = torch.norm(tmp_query, 2, 1, True) 
-    tmp_supp = s          
-    tmp_supp = tmp_supp.contiguous().view(bsize, ch_sz, -1).contiguous()
-    tmp_supp = tmp_supp.contiguous().permute(0, 2, 1).contiguous()
-    tmp_supp_norm = torch.norm(tmp_supp, 2, 2, True) 
-    similarity = torch.bmm(tmp_supp, tmp_query)/(torch.bmm(tmp_supp_norm, tmp_query_norm) + cosine_eps)   
-    similarity = similarity.max(1)[0].view(bsize, sp_sz*sp_sz)   
-    similarity = similarity.view(bsize, 1, sp_sz, sp_sz)
+
+    # Extract batch size, channel size, and spatial size
+    bsize, ch_sz, sp_sz, _ = q.size()
+
+    # Reshape and normalize the query tensor
+    tmp_query = q.view(bsize, ch_sz, -1).contiguous()
+    tmp_query_norm = torch.norm(tmp_query, p=2, dim=1, keepdim=True)
+    
+    # Reshape and normalize the support tensor
+    tmp_supp = s.view(bsize, ch_sz, -1).permute(0, 2, 1).contiguous()
+    tmp_supp_norm = torch.norm(tmp_supp, p=2, dim=2, keepdim=True)
+    
+    # Compute cosine similarity
+    cosine_eps = 1e-7
+    similarity = torch.bmm(tmp_supp, tmp_query) / (torch.bmm(tmp_supp_norm, tmp_query_norm) + cosine_eps)
+    
+    # Max pooling over the first dimension
+    similarity = similarity.max(dim=1)[0]
+    
+    # Reshape back to spatial dimensions
+    similarity = similarity.view(bsize, 1, sp_sz, sp_sz).contiguous()
+    
     return similarity
 
 
@@ -202,7 +217,7 @@ class OneModel(nn.Module):
         query_feat = self.query_merge(torch.cat([query_feat, supp_feat_bin, similarity * 10], dim=1))
         
         meta_out, weights = self.transformer(query_feat, supp_feat, mask, similarity)
-        base_out = self.base_learnear(query_feat_5)
+        base_out = self.base_learnear(query_feat_5.clone())
 
         meta_out_soft = meta_out.softmax(1)
         base_out_soft = base_out.softmax(1)
@@ -243,7 +258,7 @@ class OneModel(nn.Module):
         # else:
         #     base_map = base_out_soft[:,1:,:,:].sum(1,True)
         base_map = base_out_soft[:,1:,:,:].sum(1,True)
-        est_map = est_val.expand_as(meta_map_fg)
+        est_map = est_val.expand_as(meta_map_fg).contiguous()
 
         meta_map_bg = self.gram_merge(torch.cat([meta_map_bg,est_map], dim=1))
         meta_map_fg = self.gram_merge(torch.cat([meta_map_fg,est_map], dim=1))

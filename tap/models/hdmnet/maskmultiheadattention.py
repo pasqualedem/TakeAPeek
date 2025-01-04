@@ -36,8 +36,16 @@ class MaskMultiHeadAttention(nn.Module):
 
     @staticmethod
     def gen_history_mask(x):
+        # Extract the batch size and sequence length
         batch_size, seq_len, _ = x.size()
-        return torch.tril(torch.ones(seq_len, seq_len)).view(1, seq_len, seq_len).repeat(batch_size, 1, 1)
+        
+        # Create a lower triangular matrix with shape (seq_len, seq_len)
+        history_mask = torch.tril(torch.ones(seq_len, seq_len, device=x.device))
+        
+        # Expand it to match the batch size
+        history_mask = history_mask.unsqueeze(0).repeat(batch_size, 1, 1)
+        
+        return history_mask
 
     def _reshape_to_batches(self, x):
         batch_size, seq_len, in_feature = x.size()
