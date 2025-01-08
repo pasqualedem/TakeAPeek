@@ -117,34 +117,34 @@ def build_hdmnet(shots=1, val_fold_idx=0):
     })
     model = HDMNetModel(args, cls_type="Base")
 
-    # checkpoint_per_fold_1shot = {
-    #     0: "checkpoints/bam/coco/split0/res50/train_epoch_43.5_0.4341.pth",
-    #     1: "checkpoints/bam/coco/split1/res50/train_epoch_48_0.5059.pth",
-    #     2: "checkpoints/bam/coco/split2/res50/train_epoch_44.5_0.4749.pth",
-    #     3: "checkpoints/bam/coco/split3/res50/train_epoch_45_0.4342.pth",
-    # }
+    checkpoint_per_fold_1shot = {
+        0: "checkpoints/hdmnet/coco/split0/resnet50/best_model.pth",
+        1: "checkpoints/hdmnet/coco/split1/resnet50/best_model.pth",
+        2: "checkpoints/hdmnet/coco/split2/resnet50/best_model.pth",
+        3: "checkpoints/hdmnet/coco/split3/resnet50/best_model.pth",
+    }
 
-    # checkpoint_per_fold_5shot = {
-    #     0: "checkpoints/bam/coco/split0/res50/train5_epoch_47.5_0.4926.pth",
-    #     1: "checkpoints/bam/coco/split1/res50/train5_epoch_45.5_0.5420.pth",
-    #     2: "checkpoints/bam/coco/split2/res50/train5_epoch_45_0.5163.pth",
-    #     3: "checkpoints/bam/coco/split3/res50/train5_epoch_47_0.4955.pth",
-    # }
-    # assert shots in [1, 5]
-    # checkpoint_per_fold = checkpoint_per_fold_1shot if shots == 1 else checkpoint_per_fold_5shot
-    # checkpoint_path = checkpoint_per_fold[val_fold_idx]    
+    checkpoint_per_fold_5shot = {
+        0: "checkpoints/hdmnet/coco/split0/resnet50/best_model_5shot.pth",
+        1: "checkpoints/hdmnet/coco/split1/resnet50/best_model_5shot.pth",
+        2: "checkpoints/hdmnet/coco/split2/resnet50/best_model_5shot.pth",
+        3: "checkpoints/hdmnet/coco/split3/resnet50/best_model_5shot.pth",
+    }
+    assert shots in [1, 5]
+    checkpoint_per_fold = checkpoint_per_fold_1shot if shots == 1 else checkpoint_per_fold_5shot
+    checkpoint_path = checkpoint_per_fold[val_fold_idx]    
 
-    # if os.path.isfile(checkpoint_path):
-    #     print("=> loading checkpoint '{}'".format(checkpoint_path))
-    #     checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
-    #     new_param = checkpoint['state_dict']
-    #     try: 
-    #         model.load_state_dict(new_param)
-    #     except RuntimeError:                   # 1GPU loads mGPU model
-    #         for key in list(new_param.keys()):
-    #             new_param[key[7:]] = new_param.pop(key)
-    #         model.load_state_dict(new_param)
-    #     print("=> loaded checkpoint '{}' (epoch {})".format(checkpoint_path, checkpoint['epoch']))
-    # else:
-    #     print("=> no checkpoint found at '{}'".format(checkpoint_path))
+    if os.path.isfile(checkpoint_path):
+        print("=> loading checkpoint '{}'".format(checkpoint_path))
+        checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+        new_param = checkpoint['state_dict']
+        try: 
+            model.load_state_dict(new_param)
+        except RuntimeError:                   # 1GPU loads mGPU model
+            for key in list(new_param.keys()):
+                new_param[key[7:]] = new_param.pop(key)
+            model.load_state_dict(new_param)
+        print("=> loaded checkpoint '{}' (epoch {})".format(checkpoint_path, checkpoint['epoch']))
+    else:
+        print("=> no checkpoint found at '{}'".format(checkpoint_path))
     return model
