@@ -10,6 +10,9 @@ from copy import deepcopy
 import torchvision
 from transformers import ViTMAEForPreTraining
 from tqdm import tqdm
+
+from mmengine.utils.dl_utils.parrots_wrapper import SyncBatchNorm
+
 import yaml
 from tap.loss import FSSLoss
 from tap.utils.metrics import (
@@ -100,10 +103,30 @@ la_params = {
 }
 
 
-def set_batchnorm_eval_mode(model):
+def set_batchnorm_dropout_eval_mode(model):
     for module in model.modules():
-        if isinstance(module, nn.BatchNorm2d):
+        if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
             module.eval()
+        if isinstance(module, (nn.SyncBatchNorm, SyncBatchNorm)):
+            module.eval()
+        if isinstance(module, (nn.LazyBatchNorm1d, nn.LazyBatchNorm2d, nn.LazyBatchNorm3d)):
+            module.eval()
+        if isinstance(module, (nn.InstanceNorm1d, nn.InstanceNorm2d, nn.InstanceNorm3d)):
+            module.eval()
+        if isinstance(module, (nn.Dropout, nn.Dropout2d, nn.Dropout3d)):
+            module.eval()
+        if isinstance(module, nn.MultiheadAttention):
+            module.eval()
+        if isinstance(module, nn.LayerNorm):
+            module.eval()
+        # Stochastic depth or similar layers
+        if hasattr(module, 'training') and hasattr(module, 'survival_prob'):
+            module.training = False
+            module.survival_prob = 1.0
+        if hasattr(module, 'deterministic') and hasattr(module, 'training'):
+            module.deterministic = True
+            module.training = False
+
 
 
 def get_la(val_fold_idx, **kwargs):
@@ -147,7 +170,7 @@ def get_bam(k_shots, val_fold_idx, **kwargs):
     )
     image_size = 641
     bam = model_registry[name](**params)
-    set_batchnorm_eval_mode(bam)
+    set_batchnorm_dropout_eval_mode(bam)
     return bam, image_size
 
 
@@ -158,9 +181,9 @@ def get_hdmnet(k_shots, val_fold_idx, **kwargs):
         val_fold_idx=val_fold_idx,
     )
     image_size = 641
-    bam = model_registry[name](**params)
-    set_batchnorm_eval_mode(bam)
-    return bam, image_size
+    hdmnet = model_registry[name](**params)
+    set_batchnorm_dropout_eval_mode(hdmnet)
+    return hdmnet, image_size
 
 
 def get_model(model_name, **kwargs):
