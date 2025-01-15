@@ -43,11 +43,7 @@ substitutor_cls = {
     "incremental": IncrementalSubstitutor,
 }
 
-
-DATASET_NAME = "val_coco20i"
-dataset_args = {
-    "datasets": {
-        DATASET_NAME: {
+COCO_PARAMS = {
             "name": "coco",
             "instances_path": "data/coco/annotations/instances_val2014.json",
             "emb_dir": "data/coco/vit_b_sam_embeddings/last_block_state",
@@ -60,8 +56,31 @@ dataset_args = {
             "do_subsample": False,
             "add_box_noise": False,
             "val_num_samples": 100,
-        },
-    },
+}
+
+PASCAL_PARAMS = {
+    "name": "pascal",
+    "data_dir": "data/pascal",
+    "split": "val",
+    "val_fold_idx": 3,
+    "n_folds": 4,
+    "n_shots": 1,
+    "n_ways": 1,
+    "do_subsample": False,
+    "add_box_noise": False,
+    "val_num_samples": 100,
+}
+
+COCO_NAME = "val_coco20i"
+PASCAL_NAME = "val_pascal5i"
+
+DATASETS = {
+    "pascal": (PASCAL_NAME, PASCAL_PARAMS),
+    "coco": (COCO_NAME, COCO_PARAMS),
+}
+
+dataset_args = {
+    "datasets": {},
     "common": {
         "remove_small_annotations": True,
         "do_subsample": False,
@@ -392,21 +411,24 @@ def main(params):
     val_num_samples = params.get("val_num_samples", 100)
     model_name = params.get("model", "tap")
     val_fold_idx = params.get("val_fold_idx", 3)
+    dataset = params.get("dataset", "coco")
 
     model, image_size = get_model(
         model_name, k_shots=k_shots, val_fold_idx=val_fold_idx
     )
+    dataset_name, datasets_params = DATASETS[dataset]
+    dataset_args[dataset_name] = datasets_params
 
-    dataset_args["datasets"][DATASET_NAME]["n_ways"] = n_ways
-    dataset_args["datasets"][DATASET_NAME]["n_shots"] = k_shots
-    dataset_args["datasets"][DATASET_NAME]["val_num_samples"] = val_num_samples
-    dataset_args["datasets"][DATASET_NAME]["val_fold_idx"] = val_fold_idx
+    dataset_args["datasets"][dataset_name]["n_ways"] = n_ways
+    dataset_args["datasets"][dataset_name]["n_shots"] = k_shots
+    dataset_args["datasets"][dataset_name]["val_num_samples"] = val_num_samples
+    dataset_args["datasets"][dataset_name]["val_fold_idx"] = val_fold_idx
     dataset_args["common"]["image_size"] = image_size
 
     train, val_dict, test = get_dataloaders(
         dataset_args, dataloader_args, num_processes=1
     )
-    val = val_dict[DATASET_NAME]
+    val = val_dict[dataset_name]
 
     lora_config = LoraConfig(
         r=lora_r,
