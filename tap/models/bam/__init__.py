@@ -69,7 +69,7 @@ class BamModel(OneModel):
         }
 
 
-def build_bam(shots=1, val_fold_idx=0):
+def build_bam(dataset="coco", shots=1, val_fold_idx=0):
     args = EasyDict({
         "layers": 50,
         "vgg": False,
@@ -81,27 +81,45 @@ def build_bam(shots=1, val_fold_idx=0):
         "merge_tau": 0.9,     # fusion threshold tau 
         "zoom_factor": 8,
         "shot": shots,
-        "data_set": "coco",
+        "data_set": dataset,
         "ignore_label": 255,
         "print_freq": 10,
         "split": val_fold_idx,
     })
     model = BamModel(args, cls_type="Base")
 
-    checkpoint_per_fold_1shot = {
+    checkpoint_per_fold_1shot_coco = {
         0: "checkpoints/bam/coco/split0/res50/train_epoch_43.5_0.4341.pth",
         1: "checkpoints/bam/coco/split1/res50/train_epoch_48_0.5059.pth",
         2: "checkpoints/bam/coco/split2/res50/train_epoch_44.5_0.4749.pth",
         3: "checkpoints/bam/coco/split3/res50/train_epoch_45_0.4342.pth",
     }
 
-    checkpoint_per_fold_5shot = {
+    checkpoint_per_fold_5shot_coco = {
         0: "checkpoints/bam/coco/split0/res50/train5_epoch_47.5_0.4926.pth",
         1: "checkpoints/bam/coco/split1/res50/train5_epoch_45.5_0.5420.pth",
         2: "checkpoints/bam/coco/split2/res50/train5_epoch_45_0.5163.pth",
         3: "checkpoints/bam/coco/split3/res50/train5_epoch_47_0.4955.pth",
     }
+    
+    checkpoint_per_fold_1shot_pascal = {
+        0: "checkpoints/bam/pascal/split0/res50/train_epoch_107_0.6897.pth",
+        1: "checkpoints/bam/pascal/split1/res50/train_epoch_56_0.7359.pth",
+        2: "checkpoints/bam/pascal/split2/res50/train_epoch_57_0.6755.pth",
+        3: "checkpoints/bam/pascal/split3/res50/train_epoch_111_0.6113.pth"
+    }
+    
+    checkpoint_per_fold_5shot_pascal = {
+        0: "checkpoints/bam/pascal/split0/res50/train5_epoch_95_0.7059.pth",
+        1: "checkpoints/bam/pascal/split1/res50/train5_epoch_75_0.7505.pth",
+        2: "checkpoints/bam/pascal/split2/res50/train5_epoch_93_0.7079.pth",
+        3: "checkpoints/bam/pascal/split3/res50/train5_epoch_170_0.6720.pth"
+    }
+    
     assert shots in [1, 5]
+    assert dataset in ["coco", "pascal"]
+    checkpoint_per_fold_1shot = checkpoint_per_fold_1shot_coco if dataset == "coco" else checkpoint_per_fold_1shot_pascal
+    checkpoint_per_fold_5shot = checkpoint_per_fold_5shot_coco if dataset == "coco" else checkpoint_per_fold_5shot_pascal
     checkpoint_per_fold = checkpoint_per_fold_1shot if shots == 1 else checkpoint_per_fold_5shot
     checkpoint_path = checkpoint_per_fold[val_fold_idx]
 

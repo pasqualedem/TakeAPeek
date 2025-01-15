@@ -67,8 +67,8 @@ PASCAL_PARAMS = {
     "n_shots": 1,
     "n_ways": 1,
     "do_subsample": False,
-    "add_box_noise": False,
     "val_num_samples": 100,
+    "ignore_borders": True,
 }
 
 COCO_NAME = "val_coco20i"
@@ -83,10 +83,6 @@ dataset_args = {
     "datasets": {},
     "common": {
         "remove_small_annotations": True,
-        "do_subsample": False,
-        "add_box_noise": True,
-        "max_points_annotations": 70,
-        "max_points_per_annotation": 10,
         "load_gts": False,
         "image_size": 480,
         "load_embeddings": False,
@@ -171,21 +167,22 @@ def get_la(val_fold_idx, **kwargs):
     return model, image_size
 
 
-def get_dcama(val_fold_idx, **kwargs):
+def get_dcama(dataset, val_fold_idx, **kwargs):
     name = "dcama"
     params = dict(
         backbone_checkpoint="checkpoints/dcama/swin_base_patch4_window12_384.pth",
-        model_checkpoint=f"checkpoints/dcama/swin_fold{val_fold_idx}.pt",
+        model_checkpoint=f"checkpoints/dcama/{dataset}/swin_fold{val_fold_idx}.pt",
     )
     image_size = 384
     return model_registry[name](**params), image_size
 
 
-def get_bam(k_shots, val_fold_idx, **kwargs):
+def get_bam(dataset, k_shots, val_fold_idx, **kwargs):
     name = "bam"
     params = dict(
         shots=k_shots,
         val_fold_idx=val_fold_idx,
+        dataset=dataset,
     )
     image_size = 641
     bam = model_registry[name](**params)
@@ -268,7 +265,7 @@ class LoraEvaluator:
         self.optimizer = AdamW(self.lora_model.parameters(), lr=lr)
         self.mious = [
             DistributedMulticlassJaccardIndex(
-                num_classes=80 + 1,
+                num_classes=len(self.dataset_categories) + 1,
                 average="macro",
                 ignore_index=-100,
             ).to(device)
@@ -414,10 +411,10 @@ def main(params):
     dataset = params.get("dataset", "coco")
 
     model, image_size = get_model(
-        model_name, k_shots=k_shots, val_fold_idx=val_fold_idx
+        model_name, dataset=dataset, k_shots=k_shots, val_fold_idx=val_fold_idx
     )
     dataset_name, datasets_params = DATASETS[dataset]
-    dataset_args[dataset_name] = datasets_params
+    dataset_args["datasets"][dataset_name] = datasets_params
 
     dataset_args["datasets"][dataset_name]["n_ways"] = n_ways
     dataset_args["datasets"][dataset_name]["n_shots"] = k_shots

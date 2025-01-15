@@ -26,7 +26,7 @@ class Pascal5iDataset(PascalDataset):
             n_folds (int): Number of folds.
             n_shots (int): Number of shots.
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, load_annotation_dicts=False)
 
         assert self.split in [Pascal5iSplit.TRAIN, Pascal5iSplit.VAL]
         assert val_fold_idx < n_folds
@@ -53,7 +53,11 @@ class Pascal5iDataset(PascalDataset):
         ]
         idxs_train = [i for i in range(n_categories) if i not in idxs_val]
 
-        idxs = idxs_train if self.split == Pascal5iSplit.TRAIN else idxs_val
+        if self.split == Pascal5iSplit.TRAIN:
+            idxs = idxs_train
+        else:
+            idxs = idxs_val
+        
         self.categories = {
             k: v for i, (k, v) in enumerate(self.categories.items()) if i in idxs
         }
@@ -72,30 +76,32 @@ class Pascal5iDataset(PascalDataset):
 
             if self.n_ways == 1:
                 cat_ids = [-1, random.choice(list(self.categories.keys()))]
-                image_names = random.sample(
+                images_data = random.sample(
                     list(self.cat2img[cat_ids[1]]), self.n_shots + 1
                 )
             else:
                 cat_ids = random.sample(list(self.categories.keys()), self.n_ways)
                 query_image_name = random.choice(list(self.cat2img[cat_ids[0]]))
 
-                image_names = [query_image_name]
+                images_data = [query_image_name]
                 for cat_id in cat_ids:
                     cat_image_names = list(self.cat2img[cat_id])
                     cat_image_names = random.sample(cat_image_names, self.n_shots)
-                    image_names += cat_image_names
+                    images_data += cat_image_names
                 cat_ids = [-1] + sorted(cat_ids)
+                
+            images_name, _ = zip(*images_data)
 
-            images, image_key, ground_truths = self._get_images_or_embeddings(image_names)
+            images, image_key, ground_truths = self._get_images_or_embeddings(images_name)
 
-            masks, classes, img_sizes = self._get_prompts(image_names, cat_ids, with_random_choice=False)
+            masks, classes, img_sizes = self._get_prompts(images_data, cat_ids, with_random_choice=False)
 
         masks, flag_masks = utils.annotations_to_tensor(
             self.prompts_processor, masks, img_sizes, PromptType.MASK
         )
 
         if ground_truths is None:
-            ground_truths = self.compute_ground_truths(image_names, img_sizes, cat_ids, with_random_choice=False)
+            ground_truths = self.compute_ground_truths(images_data, img_sizes, cat_ids, with_random_choice=False)
 
         # stack ground truths
         dims = torch.tensor(img_sizes)
@@ -117,21 +123,21 @@ class Pascal5iDataset(PascalDataset):
 
         # make zeroes tensors for boxes, points and flags
         prompt_bboxes = torch.zeros(
-            (len(image_names), len(cat_ids), 1, 4), dtype=torch.float32
+            (len(images_data), len(cat_ids), 1, 4), dtype=torch.float32
         )
         flag_bboxes = torch.zeros(
-            (len(image_names), len(cat_ids), 1), dtype=torch.uint8
+            (len(images_data), len(cat_ids), 1), dtype=torch.uint8
         )
         prompt_points = torch.zeros(
-            (len(image_names), len(cat_ids), 1, 2), dtype=torch.float32
+            (len(images_data), len(cat_ids), 1, 2), dtype=torch.float32
         )
         flag_points = torch.zeros(
-            (len(image_names), len(cat_ids), 1), dtype=torch.uint8
+            (len(images_data), len(cat_ids), 1), dtype=torch.uint8
         )
         
         flag_examples = flags_merge(flag_masks, flag_points, flag_bboxes)
 
-        return {
+        data_dict = {
             image_key: images,
             BatchKeys.PROMPT_MASKS: masks,
             BatchKeys.FLAG_MASKS: flag_masks,
@@ -142,9 +148,10 @@ class Pascal5iDataset(PascalDataset):
             BatchKeys.FLAG_POINTS: flag_points,
             BatchKeys.DIMS: dims,
             BatchKeys.CLASSES: classes,
-            BatchKeys.IMAGE_IDS: image_names,
+            BatchKeys.IMAGE_IDS: images_data,
             BatchKeys.GROUND_TRUTHS: ground_truths,
         }
+        return data_dict
     
     def __len__(self):
         if self.split == Pascal5iSplit.TRAIN:
