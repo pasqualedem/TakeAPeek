@@ -71,12 +71,14 @@ class DCAMAMultiClass(DCAMA):
             x[BatchKeys.PROMPT_MASKS].shape[0] == 1
         ), "Only tested with batch size = 1"
         logits = []
+        query = x[BatchKeys.IMAGES][:, :1]
+        support = x[BatchKeys.IMAGES][:, 1:]
         # get logits for each class
         for c in range(x[BatchKeys.PROMPT_MASKS].size(2)):
             class_examples = x[BatchKeys.FLAG_EXAMPLES][:, :, c + 1]
             n_shots = class_examples.sum().item()
             class_input_dict = {
-                BatchKeys.IMAGES: x[BatchKeys.IMAGES],
+                BatchKeys.IMAGES: torch.cat([query, support[class_examples].unsqueeze(0)], dim=1),
                 BatchKeys.PROMPT_MASKS: x[BatchKeys.PROMPT_MASKS][:, :, c, ::][
                     class_examples
                 ].unsqueeze(0),
