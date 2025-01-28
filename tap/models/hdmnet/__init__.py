@@ -70,6 +70,11 @@ class HDMNetModel(OneModel):
                     [s_y, s_y[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1)],
                     dim=1
                 )
+            elif n_shots > self.shot:
+                s_x = s_x[:, :self.shot]
+                s_y = s_y[:, :self.shot]
+            else:
+                pass
             
             # Append the logits computed for this class
             class_logits = super().forward(x, s_x=s_x, s_y=s_y, y_m=y_m, y_b=y_b, cat_idx=cat_idx)
