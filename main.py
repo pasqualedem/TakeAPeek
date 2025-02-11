@@ -170,7 +170,9 @@ def cli(
         params["target_modules"] = params["target_modules"].split(",")
     else:
         # Convert the target_modules string to a list
-        target_modules_list = target_modules.split(",")
+        if "," in target_modules:
+            target_modules = target_modules.split(",")
+            target_modules = [mod for mod in target_modules if len(mod) > 0]
 
         # Create the parameters dictionary
         params = {
@@ -179,7 +181,7 @@ def cli(
             "lora_r": lora_r,
             "lora_alpha": lora_alpha,
             "lr": lr,
-            "target_modules": target_modules_list,
+            "target_modules": target_modules,
             "lora_dropout": lora_dropout,
             "substitutor": substitutor,
             "n_ways": n_ways,
