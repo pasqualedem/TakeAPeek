@@ -71,21 +71,31 @@ PASCAL_PARAMS = {
     "ignore_borders": True,
 }
 
+DEEPGLOBE_PARAMS = {
+    "name": "deepglobe",
+    "datapath": "data",
+    "split": "val",
+    "val_fold_idx": 0,
+    "n_shots": 2,
+    "n_ways": 1,
+    "val_num_samples": 100,
+}
+
 COCO_NAME = "val_coco20i"
 PASCAL_NAME = "val_pascal5i"
+DEEPGLOBE_NAME = "val_deepglobe"
 
 DATASETS = {
     "pascal": (PASCAL_NAME, PASCAL_PARAMS),
     "coco": (COCO_NAME, COCO_PARAMS),
+    "deepglobe": (DEEPGLOBE_NAME, DEEPGLOBE_PARAMS),
 }
 
 dataset_args = {
     "datasets": {},
     "common": {
         "remove_small_annotations": True,
-        "load_gts": False,
         "image_size": 480,
-        "load_embeddings": False,
         "custom_preprocess": False,
     },
 }

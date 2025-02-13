@@ -62,22 +62,14 @@ class Substitutor:
     """
 
     torch_keys_to_exchange = [
-        BatchKeys.PROMPT_POINTS,
         BatchKeys.PROMPT_MASKS,
-        BatchKeys.PROMPT_BBOXES,
         BatchKeys.FLAG_MASKS,
-        BatchKeys.FLAG_BBOXES,
-        BatchKeys.FLAG_POINTS,
         BatchKeys.FLAG_EXAMPLES,
         BatchKeys.DIMS,
     ]
     torch_keys_to_separate = [
-        BatchKeys.PROMPT_POINTS,
         BatchKeys.PROMPT_MASKS,
-        BatchKeys.PROMPT_BBOXES,
         BatchKeys.FLAG_MASKS,
-        BatchKeys.FLAG_BBOXES,
-        BatchKeys.FLAG_POINTS,
         BatchKeys.FLAG_EXAMPLES,
     ]
     list_keys_to_exchange = [BatchKeys.CLASSES, BatchKeys.IMAGE_IDS]
