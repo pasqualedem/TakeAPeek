@@ -482,7 +482,14 @@ def main(params):
         yaml.dump(params, f)
 
     if accelerator.is_main_process:
-        tracker = wandb.init(project="lorafss", config=params)
+        cache_dir = "tmp"
+        os.makedirs(cache_dir, exist_ok=True)
+        os.environ["WANDB_ARTIFACT_LOCATION"] = cache_dir
+        os.environ["WANDB_ARTIFACT_DIR"] = cache_dir
+        os.environ["WANDB_CACHE_DIR"] = cache_dir
+        os.environ["WANDB_CONFIG_DIR"] = cache_dir
+        os.environ["WANDB_DATA_DIR"] = cache_dir
+        tracker = wandb.init(project="lorafss", config=params, )
     else:
         tracker = FakeTracker()
 
