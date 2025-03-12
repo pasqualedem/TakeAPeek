@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple
 from torch.utils.data import Dataset, BatchSampler
 
 from tap.data.deepglobe import DatasetDeepglobe
+from tap.data.isic import DatasetISIC
 import tap.data.utils as utils
 from tap.data.coco import CocoLVISDataset
 from tap.data.coco20i import Coco20iDataset
@@ -27,6 +28,7 @@ datasets = {
     "val_pascal5i": Pascal5iDataset,
     "val_lvis": CocoLVISDataset,
     "val_deepglobe": DatasetDeepglobe,
+    "val_isic": DatasetISIC,
 }
 
 

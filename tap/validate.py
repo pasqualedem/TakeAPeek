@@ -46,7 +46,6 @@ substitutor_cls = {
 COCO_PARAMS = {
             "name": "coco",
             "instances_path": "data/coco/annotations/instances_val2014.json",
-            "emb_dir": "data/coco/vit_b_sam_embeddings/last_block_state",
             "img_dir": "data/coco/train_val_2017",
             "split": "val",
             "val_fold_idx": 3,
@@ -81,14 +80,26 @@ DEEPGLOBE_PARAMS = {
     "val_num_samples": 100,
 }
 
+ISIC_PARAMS = {
+    "name": "deepglobe",
+    "datapath": "data",
+    "split": "val",
+    "val_fold_idx": 0,
+    "n_shots": 2,
+    "n_ways": 1,
+    "val_num_samples": 100,
+}
+
 COCO_NAME = "val_coco20i"
 PASCAL_NAME = "val_pascal5i"
 DEEPGLOBE_NAME = "val_deepglobe"
+ISIC_NAME = "val_isic"
 
 DATASETS = {
     "pascal": (PASCAL_NAME, PASCAL_PARAMS),
     "coco": (COCO_NAME, COCO_PARAMS),
     "deepglobe": (DEEPGLOBE_NAME, DEEPGLOBE_PARAMS),
+    "isic": (ISIC_NAME, ISIC_PARAMS),
 }
 
 dataset_args = {
