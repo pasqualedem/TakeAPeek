@@ -102,14 +102,11 @@ target/
 *.zip
 *.safetensors
 
-/label_anything/data/*.json
 exp_log.csv
-/label_anything/data/raw/annotations
 notebooks/demo
-label_anything/data/annotations/instances_voc12.json
 tmp
 out
 offline
 streamlit
 settings
-data
+./data/
