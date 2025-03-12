@@ -5,6 +5,8 @@ import itertools
 from typing import Any, Dict, List, Tuple
 from torch.utils.data import Dataset, BatchSampler
 
+from tap.data.deepglobe import DatasetDeepglobe
+from tap.data.isic import DatasetISIC
 import tap.data.utils as utils
 from tap.data.coco import CocoLVISDataset
 from tap.data.coco20i import Coco20iDataset
@@ -25,6 +27,8 @@ datasets = {
     "pascal5i": Pascal5iDataset,
     "val_pascal5i": Pascal5iDataset,
     "val_lvis": CocoLVISDataset,
+    "val_deepglobe": DatasetDeepglobe,
+    "val_isic": DatasetISIC,
 }
 
 
@@ -160,28 +164,6 @@ class LabelAnythingDataset(Dataset):
         masks = torch.stack([x[0] for x in masks_flags])
         flag_masks = torch.stack([x[1] for x in masks_flags])
 
-        # prompt bbox
-        bboxes = [x["prompt_bboxes"] for x in batched_input]
-        flags = [x["flag_bboxes"] for x in batched_input]
-        max_annotations = max(x.size(2) for x in bboxes)
-        bboxes_flags = [
-            utils.collate_bbox(bboxes[i], flags[i], max_classes, max_annotations)
-            for i in range(len(bboxes))
-        ]
-        bboxes = torch.stack([x[0] for x in bboxes_flags])
-        flag_bboxes = torch.stack([x[1] for x in bboxes_flags])
-
-        # prompt coords
-        points = [x["prompt_points"] for x in batched_input]
-        flags = [x["flag_points"] for x in batched_input]
-        max_annotations = max(x.size(2) for x in points)
-        points_flags = [
-            utils.collate_coords(points[i], flags[i], max_classes, max_annotations)
-            for i in range(len(points))
-        ]
-        points = torch.stack([x[0] for x in points_flags])
-        flag_points = torch.stack([x[1] for x in points_flags])
-
         # flag examples
         flag_examples = torch.stack(
             [utils.collate_example_flags(x["flag_examples"], max_classes) for x in batched_input]
@@ -208,10 +190,6 @@ class LabelAnythingDataset(Dataset):
 
         data_dict = {
             image_key: images,
-            "prompt_points": points,
-            "flag_points": flag_points,
-            "prompt_bboxes": bboxes,
-            "flag_bboxes": flag_bboxes,
             "prompt_masks": masks,
             "flag_masks": flag_masks,
             "flag_examples": flag_examples,

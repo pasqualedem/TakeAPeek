@@ -51,9 +51,8 @@ class DCAMA(nn.Module):
         self.cross_entropy_loss = nn.CrossEntropyLoss()
 
     def forward_1shot(self, query_img, support_img, support_mask):
-        with torch.no_grad():
-            query_feats = self.extract_feats(query_img)
-            support_feats = self.extract_feats(support_img)
+        query_feats = self.extract_feats(query_img)
+        support_feats = self.extract_feats(support_img)
 
         logit_mask = self.model(query_feats, support_feats, support_mask.clone())
 

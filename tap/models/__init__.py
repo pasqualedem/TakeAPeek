@@ -22,6 +22,7 @@ from .samfew import SAMFewShotModel
 from .dcama import build_dcama
 from .fptrans import build_fptrans
 from .dummy import build_dummy
+from .dmtnet import build_dmtnet
 
 
 ComposedOutput = namedtuple("ComposedOutput", ["main", "aux"])
@@ -45,6 +46,7 @@ model_registry = {
     "fptrans": build_fptrans,
     "bam": build_bam,
     "hdmnet": build_hdmnet,
+    "dmtnet": build_dmtnet,
     "dummy": build_dummy,
     # Encoders only
     **ENCODERS

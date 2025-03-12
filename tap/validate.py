@@ -45,18 +45,17 @@ substitutor_cls = {
 }
 
 COCO_PARAMS = {
-    "name": "coco",
-    "instances_path": "data/coco/annotations/instances_val2014.json",
-    "emb_dir": "data/coco/vit_b_sam_embeddings/last_block_state",
-    "img_dir": "data/coco/train_val_2017",
-    "split": "val",
-    "val_fold_idx": 3,
-    "n_folds": 4,
-    "n_shots": 1,
-    "n_ways": 1,
-    "do_subsample": False,
-    "add_box_noise": False,
-    "val_num_samples": 100,
+            "name": "coco",
+            "instances_path": "data/coco/annotations/instances_val2014.json",
+            "img_dir": "data/coco/train_val_2017",
+            "split": "val",
+            "val_fold_idx": 3,
+            "n_folds": 4,
+            "n_shots": 1,
+            "n_ways": 1,
+            "do_subsample": False,
+            "add_box_noise": False,
+            "val_num_samples": 100,
 }
 
 PASCAL_PARAMS = {
@@ -72,21 +71,43 @@ PASCAL_PARAMS = {
     "ignore_borders": True,
 }
 
+DEEPGLOBE_PARAMS = {
+    "name": "deepglobe",
+    "datapath": "data",
+    "split": "val",
+    "val_fold_idx": 0,
+    "n_shots": 2,
+    "n_ways": 1,
+    "val_num_samples": 100,
+}
+
+ISIC_PARAMS = {
+    "name": "deepglobe",
+    "datapath": "data",
+    "split": "val",
+    "val_fold_idx": 0,
+    "n_shots": 2,
+    "n_ways": 1,
+    "val_num_samples": 100,
+}
+
 COCO_NAME = "val_coco20i"
 PASCAL_NAME = "val_pascal5i"
+DEEPGLOBE_NAME = "val_deepglobe"
+ISIC_NAME = "val_isic"
 
 DATASETS = {
     "pascal": (PASCAL_NAME, PASCAL_PARAMS),
     "coco": (COCO_NAME, COCO_PARAMS),
+    "deepglobe": (DEEPGLOBE_NAME, DEEPGLOBE_PARAMS),
+    "isic": (ISIC_NAME, ISIC_PARAMS),
 }
 
 dataset_args = {
     "datasets": {},
     "common": {
         "remove_small_annotations": True,
-        "load_gts": False,
         "image_size": 480,
-        "load_embeddings": False,
         "custom_preprocess": False,
     },
 }
@@ -196,12 +217,25 @@ def get_hdmnet(k_shots, val_fold_idx, **kwargs):
     set_batchnorm_dropout_eval_mode(hdmnet)
     return hdmnet, image_size
 
+
+def get_dmtnet(k_shots, val_fold_idx, **kwargs):
+    name = "dmtnet"
+    params = dict(
+        model_checkpoint="checkpoints/dmtnet.pt",
+    )
+    image_size = 400
+    dmtnet = model_registry[name](**params)
+    set_batchnorm_dropout_eval_mode(dmtnet)
+    return dmtnet, image_size
+
+
 def get_model(model_name, **kwargs):
     supported_models = {
         "label_anything": get_la,
         "dcama": get_dcama,
         "bam": get_bam,
         "hdmnet": get_hdmnet,
+        "dmtnet": get_dmtnet,
     }
     return supported_models[model_name](**kwargs)
 
@@ -352,7 +386,7 @@ class LoraEvaluator:
         with open(f"{self.print_folder}/mious.txt", "w") as f:
             f.write("\n".join([str(m) for m in miou_values]))
 
-    def evaluate(self):
+    def evaluate(self):        
         bar = tqdm(enumerate(self.dataloader), total=len(self.dataloader))
         for i, (batch_tuple, data_name) in bar:
             self.reset_lora()

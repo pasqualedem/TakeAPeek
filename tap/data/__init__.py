@@ -31,9 +31,8 @@ def map_collate(dataset):
 
 
 def get_preprocessing(params):
-    SIZE = 1024
+    SIZE = 256
     size = params.get("common", {}).get("image_size", SIZE)
-    custom_preprocess = params.get("common", {}).get("custom_preprocess", True)
     if "preprocess" in params.get("common", {}):
         preprocess_params = params["common"].pop("preprocess")
         mean = preprocess_params["mean"]
@@ -41,23 +40,13 @@ def get_preprocessing(params):
         mean, std = get_mean_std(mean, std)
     else:
         mean, std = get_mean_std("default", "default")
-    preprocess = (
-        Compose(
-            [
-                CustomResize(long_side_length=size),
-                ToTensor(),
-                CustomNormalize(size, mean, std),
-            ]
-        )
-        if custom_preprocess
-        else Compose(
+    preprocess = Compose(
             [
                 Resize(size=(size, size)),
                 ToTensor(),
                 Normalize(mean, std),
             ]
         )
-    )
     return preprocess
 
 
