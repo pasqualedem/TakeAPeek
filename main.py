@@ -128,6 +128,7 @@ def parallel_experiment_lora(param_file, multi_gpu=False):
 @click.option("--val_num_samples", default=100, help="Number of samples for validation.")
 @click.option("--val_fold_idx", default=3, help="Fold index for validation.", type=int)
 @click.option("--lora_dropout", default=0.1, help="LoRA dropout value.", type=float)
+@click.option("--subsample", default=None, help="Subsample substitutor value.", type=int)
 @click.option(
     "--experiment_file",
     default=None,
@@ -149,6 +150,7 @@ def cli(
     model,
     target_modules,
     lora_dropout,
+    subsample,
     substitutor,
     n_ways,
     k_shots,
@@ -185,6 +187,7 @@ def cli(
             "lr": lr,
             "target_modules": target_modules,
             "lora_dropout": lora_dropout,
+            "subsample": subsample,
             "substitutor": substitutor,
             "n_ways": n_ways,
             "k_shots": k_shots,
