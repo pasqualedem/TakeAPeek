@@ -426,6 +426,7 @@ def main(params):
     target_modules = params.get("target_modules", ["query", "value"])
     lora_dropout = params.get("lora_dropout", 0.1)
     substitutor = params.get("substitutor", "default")
+    subsample = params.get("subsample", None)
     n_ways = params.get("n_ways", 2)
     k_shots = params.get("k_shots", 5)
     val_num_samples = params.get("val_num_samples", 100)
@@ -492,6 +493,7 @@ def main(params):
         custom_preprocess=False,
         n_ways=n_ways,
         k_shots=k_shots,
+        subsample=subsample,
     )
 
     lora_evaluator = LoraEvaluator(

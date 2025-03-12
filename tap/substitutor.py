@@ -8,7 +8,13 @@ from tap.data.utils import BatchKeys
 
 
 def divide_query_examples(
-    batch, ground_truths, torch_keys_to_separate, list_keys_to_separate
+    batch,
+    ground_truths,
+    torch_keys_to_exchange,
+    list_keys_to_exchange,
+    torch_keys_to_separate,
+    list_keys_to_separate,
+    subsample=None,
 ):
     batch_examples = {key: batch[key][:, 1:] for key in torch_keys_to_separate}
     for key in list_keys_to_separate:
@@ -16,6 +22,34 @@ def divide_query_examples(
     gt = ground_truths[:, 0]
     for key in batch.keys() - set(torch_keys_to_separate + list_keys_to_separate):
         batch_examples[key] = batch[key]
+
+    if subsample:
+        support_set_len = batch[BatchKeys.IMAGES].shape[1] - 1
+        device = batch["images"].device
+        granted_first_sample = torch.tensor([0], device=device)
+        index_tensor = torch.randperm(support_set_len - 1, device=device)[
+            : subsample - 1
+        ]
+        index_tensor = torch.cat([granted_first_sample, index_tensor])
+        query_index_tensor = torch.cat(
+            [torch.tensor([0], device=device), index_tensor + 1]
+        )
+
+        for key_set, separate_keys in [
+            (torch_keys_to_exchange, torch_keys_to_separate),
+            (list_keys_to_exchange, list_keys_to_separate),
+        ]:
+            for key in key_set:
+                if key in batch_examples:
+                    indices = (
+                        index_tensor if key in separate_keys else query_index_tensor
+                    )
+                    if isinstance(batch_examples[key], list):
+                        batch_examples[key] = [
+                            [elem[idx] for idx in indices] for elem in batch_examples[key]
+                        ]
+                    else:
+                        batch_examples[key] = batch_examples[key][:, indices]
 
     return batch_examples, gt
 
@@ -32,8 +66,8 @@ def generate_incremental_tensors(N, K):
         # Determine how many extra elements to include based on iteration
         # Each tensor has 1 + (extra elements). The number of extra elements grows by N every N iterations
         num_extra_rows = (
-            (i // N) + 1
-        )  # Extra elements = N for first batch, 2N for second, etc.
+            i // N
+        ) + 1  # Extra elements = N for first batch, 2N for second, etc.
 
         i_row = i // N  # The row of the current element in the example matrix
         if i_row == K - 1:
@@ -42,7 +76,9 @@ def generate_incremental_tensors(N, K):
             extra_elements = torch.tensor([x for x in ordered_elements if x != num])
         else:
             possible_rows = [row_k for row_k in range(K) if row_k != i_row]
-            sampled_rows = np.random.choice(possible_rows, num_extra_rows, replace=False)
+            sampled_rows = np.random.choice(
+                possible_rows, num_extra_rows, replace=False
+            )
             sampled_rows = torch.tensor(np.sort(sampled_rows))
             rows = torch.index_select(example_matrix, 0, sampled_rows)
             extra_elements = rearrange(rows, "b n -> (b n)", n=N)
@@ -62,6 +98,7 @@ class Substitutor:
     """
 
     torch_keys_to_exchange = [
+        BatchKeys.IMAGES,
         BatchKeys.PROMPT_MASKS,
         BatchKeys.FLAG_MASKS,
         BatchKeys.FLAG_EXAMPLES,
@@ -76,7 +113,12 @@ class Substitutor:
     list_keys_to_separate = []
 
     def __init__(
-        self, substitute=True, long_side_length=1024, custom_preprocess=True, **kwargs
+        self,
+        substitute=True,
+        long_side_length=1024,
+        custom_preprocess=True,
+        subsample=None,
+        **kwargs,
     ) -> None:
         if kwargs:
             print(f"Warning: Unrecognized arguments: {kwargs}")
@@ -84,16 +126,17 @@ class Substitutor:
         self.substitute = substitute
         self.it = 0
         self.query_iteration = True
+        self.subsample = subsample
         self.prompt_processor = PromptsProcessor(
             long_side_length=long_side_length, custom_preprocess=custom_preprocess
         )
 
     def reset(self, batch: dict) -> None:
         self.it = 0
+        self.query_iteration = True
         self.batch, self.ground_truths = batch
         self.batch, self.query_image_gt_dim = self.first_divide_query_examples()
         self.example_classes = self.batch[BatchKeys.CLASSES]
-        self.query_iteration = True
 
     def __iter__(self):
         return self
@@ -111,7 +154,13 @@ class Substitutor:
         batch = self.batch if batch is None else batch
         gt = self.ground_truths if gt is None else gt
         return divide_query_examples(
-            batch, gt, self.torch_keys_to_separate, self.list_keys_to_separate
+            batch,
+            gt,
+            self.torch_keys_to_exchange,
+            self.list_keys_to_exchange,
+            self.torch_keys_to_separate,
+            self.list_keys_to_separate,
+            subsample=self.subsample if not self.query_iteration else None, # Only subsample after first iteration
         )
 
     def divide_query_examples_append_query_dim(self):
@@ -125,16 +174,9 @@ class Substitutor:
         return batch, gt
 
     def get_batch_info(self):
-        torch_keys_to_exchange = self.torch_keys_to_exchange.copy()
-        if "images" in self.batch:
-            torch_keys_to_exchange.append("images")
-            num_images = self.batch["images"].shape[1]
-            device = self.batch["images"].device
-        if "embeddings" in self.batch:
-            torch_keys_to_exchange.append("embeddings")
-            num_images = self.batch["embeddings"].shape[1]
-            device = self.batch["embeddings"].device
-        return torch_keys_to_exchange, num_images, device
+        num_images = self.batch["images"].shape[1]
+        device = self.batch["images"].device
+        return num_images, device
 
     def _query_iteration(self):
         self.query_iteration = False
@@ -150,7 +192,7 @@ class Substitutor:
         return batch, self.query_image_gt_dim[1]
 
     def __next__(self):
-        torch_keys_to_exchange, num_images, device = self.get_batch_info()
+        num_images, device = self.get_batch_info()
 
         if self.query_iteration:
             return self._query_iteration()
@@ -171,7 +213,7 @@ class Substitutor:
                 ]
             ).long()
 
-        for key in torch_keys_to_exchange:
+        for key in self.torch_keys_to_exchange:
             self.batch[key] = torch.index_select(
                 self.batch[key], dim=1, index=index_tensor
             )
@@ -181,7 +223,7 @@ class Substitutor:
                 [elem[i] for i in index_tensor] for elem in self.batch[key]
             ]
         for key in self.batch.keys() - set(
-            torch_keys_to_exchange + self.list_keys_to_exchange
+            self.torch_keys_to_exchange + self.list_keys_to_exchange
         ):
             self.batch[key] = self.batch[key]
 
@@ -207,7 +249,7 @@ class IncrementalSubstitutor(Substitutor):
         self.k_shots = k_shots
         super().__init__(substitute, long_side_length, custom_preprocess)
         self.index_tensors = generate_incremental_tensors(self.n_ways, self.k_shots)
-        
+
     def reset(self, batch):
         self.index_tensors = generate_incremental_tensors(self.n_ways, self.k_shots)
         return super().reset(batch)
@@ -222,7 +264,8 @@ class IncrementalSubstitutor(Substitutor):
         return self.divide_query_examples(batch, gt)
 
     def __next__(self):
-        torch_keys_to_exchange, num_images, device = self.get_batch_info()
+        num_images, device = self.get_batch_info()
+        torch_keys_to_exchange = self.torch_keys_to_exchange.copy()
         torch_keys_to_exchange.remove(BatchKeys.DIMS)
         if self.query_iteration:
             return self._query_iteration()
