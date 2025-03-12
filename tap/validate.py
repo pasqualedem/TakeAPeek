@@ -21,7 +21,7 @@ from tap.utils.metrics import (
 )
 from tap.data import get_dataloaders
 from tap.models import model_registry
-from tap.utils.utils import torch_dict_load
+from tap.utils.utils import torch_dict_load, FakeTracker
 from torch.optim import AdamW
 
 import lovely_tensors as lt
@@ -35,8 +35,9 @@ from tap.utils import (
     random_foldername,
 )
 
-lt.monkey_patch()
+from accelerate import Accelerator
 
+lt.monkey_patch()
 
 substitutor_cls = {
     "default": Substitutor,
@@ -138,7 +139,6 @@ la_params = {
     "custom_preprocess": False,
 }
 
-
 def set_batchnorm_dropout_eval_mode(model):
     for module in model.modules():
         if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
@@ -163,8 +163,6 @@ def set_batchnorm_dropout_eval_mode(model):
             module.deterministic = True
             module.training = False
 
-
-
 def get_la(val_fold_idx, **kwargs):
     name = "lam_mae_b"
     path = {
@@ -187,7 +185,6 @@ def get_la(val_fold_idx, **kwargs):
         print(f"Unexpected key: {key}")
     return model, image_size
 
-
 def get_dcama(dataset, val_fold_idx, **kwargs):
     name = "dcama"
     params = dict(
@@ -196,7 +193,6 @@ def get_dcama(dataset, val_fold_idx, **kwargs):
     )
     image_size = 384
     return model_registry[name](**params), image_size
-
 
 def get_bam(dataset, k_shots, val_fold_idx, **kwargs):
     name = "bam"
@@ -209,7 +205,6 @@ def get_bam(dataset, k_shots, val_fold_idx, **kwargs):
     bam = model_registry[name](**params)
     set_batchnorm_dropout_eval_mode(bam)
     return bam, image_size
-
 
 def get_hdmnet(k_shots, val_fold_idx, **kwargs):
     name = "hdmnet"
@@ -244,7 +239,6 @@ def get_model(model_name, **kwargs):
     }
     return supported_models[model_name](**kwargs)
 
-
 class ViTModelWrapper(ViTMAEForPreTraining):
     def forward(self, x):
         h, w = x.shape[-2:]
@@ -255,10 +249,10 @@ class ViTModelWrapper(ViTMAEForPreTraining):
     def mae_forward(self, *args, **kwargs):
         return super().forward(*args, **kwargs)
 
-
 class LoraEvaluator:
     def __init__(
         self,
+        accelerator,
         model,
         dataloader,
         lora_config,
@@ -268,8 +262,9 @@ class LoraEvaluator:
         print_folder,
         print_every=50,
         device="cuda",
-        run=None,
+        tracker=None,
     ):
+        self.accelerator = accelerator
         self.num_iterations = num_iterations
         self.lora_config = lora_config
         self.dataloader = dataloader
@@ -278,7 +273,7 @@ class LoraEvaluator:
         self.device = device
         self.num_iterations = num_iterations
         self.lr = lr
-        self.run = run
+        self.tracker = tracker
 
         os.makedirs(print_folder, exist_ok=True)
         self.dataset_categories = next(
@@ -335,10 +330,6 @@ class LoraEvaluator:
                 if i == 0:
                     self.mious[k].update(glob_preds, glob_gt)
                     segmentation_preds.append(preds.detach().cpu())
-            # clear memory
-            # del res, loss_value, preds, glob_preds, glob_gt
-            # torch.cuda.empty_cache()
-            # gc.collect()
         return segmentation_preds
 
     def print_results(self, i, batch_tuple, segmentation_preds):
@@ -378,18 +369,18 @@ class LoraEvaluator:
         miou_values = [miou.compute().item() for miou in self.mious]
         for i, miou_value in enumerate(miou_values):
             if i == 0:
-                self.run.log({"miou_orig": miou_value})
+                self.tracker.log({"miou_orig": miou_value})
             else:
-                self.run.log({f"miou_it_{i}": miou_value})
-                self.run.log({f"gain_it_{i}": miou_value - miou_values[0]})
-                self.run.log({"miou": miou_value})
-                self.run.log({"gain": miou_value - miou_values[0]})
+                self.tracker.log({f"miou_it_{i}": miou_value})
+                self.tracker.log({f"gain_it_{i}": miou_value - miou_values[0]})
+                self.tracker.log({"miou": miou_value})
+                self.tracker.log({"gain": miou_value - miou_values[0]})
             print(f"Iteration {i}: miou: {miou_value}")
         plt.plot(miou_values)
         best_miou = max(miou_values)
-        self.run.log({"best_miou": best_miou})
+        self.tracker.log({"best_miou": best_miou})
         best_gain = best_miou - miou_values[0]
-        self.run.log({"best_gain": best_gain})
+        self.tracker.log({"best_gain": best_gain})
 
         plt.savefig(f"{self.print_folder}/mious.png")
         with open(f"{self.print_folder}/mious.txt", "w") as f:
@@ -413,7 +404,6 @@ class LoraEvaluator:
                 miouN=self.mious[-1].compute().item(),
             )
         self.print_mious()
-
 
 def main(params):
     foldername = random_foldername()
@@ -443,9 +433,18 @@ def main(params):
     val_fold_idx = params.get("val_fold_idx", 3)
     dataset = params.get("dataset", "coco")
 
+    # Initialize Accelerator
+    accelerator = Accelerator(
+        even_batches=False,
+        # kwargs_handlers=kwargs,
+        split_batches=False,
+    )
+
     model, image_size = get_model(
         model_name, dataset=dataset, k_shots=k_shots, val_fold_idx=val_fold_idx
     )
+    model = accelerator.prepare(model)
+    
     dataset_name, datasets_params = DATASETS[dataset]
     dataset_args["datasets"][dataset_name] = datasets_params
 
@@ -459,6 +458,7 @@ def main(params):
         dataset_args, dataloader_args, num_processes=1
     )
     val = val_dict[dataset_name]
+    val = accelerator.prepare(val)
 
     lora_config = LoraConfig(
         r=lora_r,
@@ -481,7 +481,10 @@ def main(params):
     with open(f"{subfolder}/params.yaml", "w") as f:
         yaml.dump(params, f)
 
-    run = wandb.init(project="lorafss", config=params)
+    if accelerator.is_main_process:
+        tracker = wandb.init(project="lorafss", config=params)
+    else:
+        tracker = FakeTracker()
 
     substitutor = substitutor_cls[substitutor](
         substitute=True,
@@ -492,6 +495,7 @@ def main(params):
     )
 
     lora_evaluator = LoraEvaluator(
+        accelerator,
         model,
         val,
         lora_config,
@@ -499,10 +503,10 @@ def main(params):
         lr,
         print_folder=subfolder,
         device=device,
-        run=run,
+        tracker=tracker,
         substitutor=substitutor,
     )
-    run.log({"trainable_params": lora_evaluator.trainable_params})
+    tracker.log({"trainable_params": lora_evaluator.trainable_params})
 
     lora_evaluator.evaluate()
-    run.finish()
+    tracker.finish()

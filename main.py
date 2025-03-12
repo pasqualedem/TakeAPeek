@@ -16,7 +16,8 @@ logger = get_logger(__name__)
 
 class ParallelRun:
     slurm_command = "sbatch"
-    slurm_script = "slurm/launch_run"
+    slurm_script = "slurm/launch_lora"
+    slurm_multi_gpu_script = "slurm/launch_lora_multi_gpu"
     slurm_script_first_parameter = "--parameters="
     slurm_outfolder = "out"
     out_extension = "out"
@@ -24,9 +25,10 @@ class ParallelRun:
     slurm_stderr = "-e"
     slurm_stdout = "-o"
 
-    def __init__(self, params: dict, experiment_timestamp: str):
+    def __init__(self, params: dict, experiment_timestamp: str, multi_gpu=False):
         self.params = params
         self.exp_timestamp = experiment_timestamp
+        self.multi_gpu = multi_gpu
         if "." not in sys.path:
             sys.path.extend(".")
 
@@ -41,13 +43,14 @@ class ParallelRun:
         param_file = f"{run_uuid}.{self.param_extension}"
         param_file = os.path.join(out_folder, param_file)
         write_yaml(self.params, param_file)
+        slurm_script = self.slurm_multi_gpu_script if self.multi_gpu else self.slurm_script
         command = [
             self.slurm_command,
             self.slurm_stdout,
             out_file,
             self.slurm_stderr,
             out_file,
-            self.slurm_script,
+            slurm_script,
             self.slurm_script_first_parameter + param_file,
         ]
         if only_create:
@@ -57,12 +60,7 @@ class ParallelRun:
             subprocess.run(command)
 
 
-class ParallelLoraRun(ParallelRun):
-
-    slurm_script = "slurm/launch_lora"
-
-
-def parallel_experiment_lora(param_file):
+def parallel_experiment_lora(param_file, multi_gpu=False):
     timestamp = get_timestamp()
     settings = load_yaml(param_file)
     base_grid = settings["parameters"]
@@ -95,7 +93,7 @@ def parallel_experiment_lora(param_file):
         for j, run_params in enumerate(grid):
             print(f"Run {j+1}:")
             run_params["experiment"] = {"group": "LoRa"}
-            run = ParallelLoraRun(run_params, experiment_timestamp=timestamp)
+            run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu)
             run.launch()
 
 
@@ -139,6 +137,7 @@ def parallel_experiment_lora(param_file):
     default=None,
     help="Path to the file containing the parameters for a single run",
 )
+@click.option("--multi_gpu", is_flag=True, show_default=True, default=False, help="Use multiple GPUs")
 def cli(
     num_iterations,
     device,
@@ -156,13 +155,14 @@ def cli(
     val_fold_idx,
     experiment_file,
     parameters,
+    multi_gpu,
 ):
     """
     Command-line interface for setting parameters for LoRA training or testing.
     Collects parameters and passes them as a dictionary.
     """
     if experiment_file is not None:
-        parallel_experiment_lora(experiment_file)
+        parallel_experiment_lora(experiment_file, multi_gpu)
         return
 
     if parameters is not None:

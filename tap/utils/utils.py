@@ -310,3 +310,11 @@ class ResultDict(StrEnum):
     LOSS = "loss"
     LAST_HIDDEN_STATE = 'last_hidden_state'
     LAST_BLOCK_STATE = 'last_block_state'
+
+
+class FakeTracker:
+    def log(self, *args, **kwargs):
+        pass
+    
+    def finish(self):
+        pass
