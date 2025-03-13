@@ -83,7 +83,7 @@ DEEPGLOBE_PARAMS = {
 
 ISIC_PARAMS = {
     "name": "deepglobe",
-    "datapath": "data",
+    "datapath": "data/ISIC_cls",
     "split": "val",
     "val_fold_idx": 0,
     "n_shots": 2,
