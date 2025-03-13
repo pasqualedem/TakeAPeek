@@ -92,7 +92,8 @@ def parallel_experiment_lora(param_file, multi_gpu=False):
         print(f"Grid {i+1}:")
         for j, run_params in enumerate(grid):
             print(f"Run {j+1}:")
-            run_params["experiment"] = {"group": "LoRa"}
+            if "experiment" not in run_params:
+                run_params["experiment"] = {"group": "LoRa"}
             run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu)
             run.launch()
 
@@ -169,7 +170,8 @@ def cli(
 
     if parameters is not None:
         params = load_yaml(parameters)
-        params["target_modules"] = params["target_modules"].split(",")
+        if "," in params["target_modules"]:
+            params["target_modules"] = params["target_modules"].split(",")
     else:
         # Convert the target_modules string to a list
         if "," in target_modules:
