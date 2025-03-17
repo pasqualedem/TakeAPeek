@@ -1,4 +1,4 @@
-r""" ISIC few-shot semantic segmentation dataset """
+r""" Chest X-ray few-shot semantic segmentation dataset """
 import os
 import glob
 
@@ -10,30 +10,30 @@ import numpy as np
 
 from tap.data.utils import BatchKeys
 
-# 1:1867 2:519 3:208
-class DatasetISIC(Dataset):
+# test: 704
+class DatasetLung(Dataset):
     def __init__(self, datapath, preprocess, split, n_shots, val_num_samples=600, **kwargs):
         self.split = split
-        self.benchmark = 'isic'
+        self.nclass = 1
+        self.benchmark = 'lung'
         self.shot = n_shots
         self.num = val_num_samples
-        self.categories = {1:'1', 2:'2', 3:'3'}
 
-        self.base_path = os.path.join(datapath, 'ISIC')
-        self.img_path = os.path.join(self.base_path, 'ISIC2018_Task1-2_Training_Input')
-        self.ann_path = os.path.join(self.base_path, 'ISIC2018_Task1_Training_GroundTruth')
+        self.base_path = os.path.join(datapath, 'LungSegmentation')
+        self.img_path = os.path.join(self.base_path, 'CXR_png')
+        self.ann_path = os.path.join(self.base_path, 'masks')
         self.transform = preprocess
 
-        self.class_ids = range(0, 3)
+        self.categories = {1:'1'}
+
+        self.class_ids = range(0, 1)
         self.img_metadata_classwise = self.build_img_metadata_classwise()       
 
     def __len__(self):
         return self.num
 
-    def __getitem__(self, idx_batchmetadata):
-        idx, _ = idx_batchmetadata
+    def __getitem__(self, idx):
         query_name, support_names, class_sample = self.sample_episode(idx)
-
         query_img, query_mask, support_imgs, support_masks = self.load_frame(query_name, support_names)
         query_img = self.transform(query_img)
         query_mask = F.interpolate(query_mask.unsqueeze(0).unsqueeze(0).float(), query_img.size()[-2:], mode='nearest').squeeze()
@@ -44,15 +44,6 @@ class DatasetISIC(Dataset):
             support_masks_tmp.append(smask)
         support_masks = torch.stack(support_masks_tmp)
 
-        # batch = {'query_img': query_img,
-        #          'query_mask': query_mask,
-        #          'query_name': query_name,
-
-        #          'support_imgs': support_imgs,
-        #          'support_masks': support_masks,
-        #          'support_names': support_names,
-
-        #          'class_id': torch.tensor(class_sample)}
         images = torch.cat([query_img.unsqueeze(0), support_imgs], dim=0)
         support_masks = torch.cat([query_mask.unsqueeze(0).unsqueeze(0), support_masks.unsqueeze(1)], dim=0)
         support_masks = torch.concat([torch.zeros_like(support_masks), support_masks], dim=1)
@@ -72,16 +63,23 @@ class DatasetISIC(Dataset):
         return data_dict
 
     def load_frame(self, query_name, support_names):
-        query_img = Image.open(query_name).convert('RGB')
-        support_imgs = [Image.open(name).convert('RGB') for name in support_names]
-
-        query_id = query_name.split('/')[-1].split('.')[0]
-        query_name = os.path.join(self.ann_path, query_id) + '_segmentation.png'
-        support_ids = [name.split('/')[-1].split('.')[0] for name in support_names]
-        support_names = [os.path.join(self.ann_path, sid) + '_segmentation.png' for name, sid in zip(support_names, support_ids)]
-
         query_mask = self.read_mask(query_name)
         support_masks = [self.read_mask(name) for name in support_names]
+        if query_name.find('MCUCXR')!=-1:
+            query_id = query_name
+        else:
+            query_id = query_name[:-9] + '.png'
+
+        query_img = Image.open(os.path.join(self.img_path, os.path.basename(query_id))).convert('RGB')
+        support_ids = []
+        for name in support_names:
+            if name.find('MCUCXR')!=-1:
+                support_ids.append(os.path.basename(name))
+            else:
+                support_ids.append(os.path.basename(name)[:-9] + '.png')
+
+        support_names = [os.path.join(self.img_path, sid) for sid in support_ids]
+        support_imgs = [Image.open(name).convert('RGB') for name in support_names]
 
         return query_img, query_mask, support_imgs, support_masks
 
@@ -91,7 +89,8 @@ class DatasetISIC(Dataset):
         mask[mask >= 128] = 1
         return mask
 
-    def sample_episode(self, idx):
+    def sample_episode(self, idx_batchmetadata):
+        idx, _ = idx_batchmetadata
         class_id = (idx % len(self.class_ids))+1
         class_sample = self.categories[class_id]
 
@@ -109,12 +108,15 @@ class DatasetISIC(Dataset):
         for cat in self.categories.values():
             img_metadata_classwise[cat] = []
 
-        build_path = self.img_path
-
+        if self.split == 'test':
+            build_path = self.ann_path
+        elif self.split == 'aux':
+            build_path = self.aux_path
+        
         for cat in self.categories.values():
-            img_paths = sorted([path for path in glob.glob('%s/*' % os.path.join(build_path, cat))])
+            img_paths = sorted([path for path in glob.glob('%s/*' % build_path)])
             for img_path in img_paths:
-                if os.path.basename(img_path).split('.')[1] == 'jpg':
+                if os.path.basename(img_path).split('.')[1] == 'png':
                     img_metadata_classwise[cat] += [img_path]
         print('Total (%s) %s images are : %d' % (self.split, self.benchmark, self.__len__()))
         return img_metadata_classwise

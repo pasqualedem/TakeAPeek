@@ -91,16 +91,28 @@ ISIC_PARAMS = {
     "val_num_samples": 100,
 }
 
+LUNG_PARAMS = {
+    "name": "chest",
+    "datapath": "data",
+    "split": "test",
+    "val_fold_idx": 0,
+    "n_shots": 2,
+    "n_ways": 1,
+    "val_num_samples": 100,
+}
+
 COCO_NAME = "val_coco20i"
 PASCAL_NAME = "val_pascal5i"
 DEEPGLOBE_NAME = "val_deepglobe"
 ISIC_NAME = "val_isic"
+LUNG_NAME = "val_lung"
 
 DATASETS = {
     "pascal": (PASCAL_NAME, PASCAL_PARAMS),
     "coco": (COCO_NAME, COCO_PARAMS),
     "deepglobe": (DEEPGLOBE_NAME, DEEPGLOBE_PARAMS),
     "isic": (ISIC_NAME, ISIC_PARAMS),
+    'lung': (LUNG_NAME, LUNG_PARAMS),
 }
 
 dataset_args = {
