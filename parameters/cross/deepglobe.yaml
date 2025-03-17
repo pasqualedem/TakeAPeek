@@ -1,0 +1,18 @@
+experiment:
+  group: DeepGlobe
+parameters:
+  # num_iterations: [8, 16, 24]
+  num_iterations: [8]
+  device: [cuda]
+  lora_r: [64]
+  lr: [0.0001]
+  target_modules: ["^backbone\\..*\\.conv1$"]
+  lora_dropout: [0.1]
+  val_num_samples: [1200]
+  model: [dmtnet]
+  n_ways: [1]
+  k_shots: [10, 15]
+  subsample: [1]
+  dataset: [deepglobe]
+
+other_grids:

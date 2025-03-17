@@ -12,11 +12,11 @@ from tap.data.utils import BatchKeys
 
 # 1:1867 2:519 3:208
 class DatasetISIC(Dataset):
-    def __init__(self, datapath, preprocess, split, n_shots, num=600, **kwargs):
+    def __init__(self, datapath, preprocess, split, n_shots, val_num_samples=600, **kwargs):
         self.split = split
         self.benchmark = 'isic'
         self.shot = n_shots
-        self.num = num
+        self.num = val_num_samples
         self.categories = {1:'1', 2:'2', 3:'3'}
 
         self.base_path = os.path.join(datapath, 'ISIC')
@@ -65,7 +65,7 @@ class DatasetISIC(Dataset):
             BatchKeys.FLAG_EXAMPLES: flag_examples,
             BatchKeys.DIMS: torch.tensor([img.shape[-2:] for img in images]),
             BatchKeys.CLASSES: [[class_sample] for _ in range(len(images))],
-            BatchKeys.IMAGE_IDS: [*[query_name], *[support_names]],
+            BatchKeys.IMAGE_IDS: [*[query_name], *support_names],
             BatchKeys.GROUND_TRUTHS: support_masks[:, 1],
         }
 

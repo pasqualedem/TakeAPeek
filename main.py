@@ -65,6 +65,11 @@ def parallel_experiment_lora(param_file, multi_gpu=False):
     settings = load_yaml(param_file)
     base_grid = settings["parameters"]
     other_grids = settings["other_grids"]
+    
+    if "experiment" not in settings:
+        settings["experiment"] = {}
+    if "group" not in settings["experiment"]:
+        settings["experiment"]["group"] = "LoRa"
 
     print("\n" + "=" * 100)
     complete_grids = [base_grid]
@@ -92,8 +97,7 @@ def parallel_experiment_lora(param_file, multi_gpu=False):
         print(f"Grid {i+1}:")
         for j, run_params in enumerate(grid):
             print(f"Run {j+1}:")
-            if "experiment" not in run_params:
-                run_params["experiment"] = {"group": "LoRa"}
+            run_params['experiment'] = settings["experiment"]
             run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu)
             run.launch()
 
