@@ -11,7 +11,7 @@ parameters:
   val_num_samples: [1200]
   model: [dmtnet]
   n_ways: [1]
-  k_shots: [10, 15]
+  k_shots: [3, 5, 10, 15]
   subsample: [1]
   dataset: [deepglobe]
 

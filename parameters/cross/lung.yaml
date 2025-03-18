@@ -1,5 +1,5 @@
 experiment:
-  group: ISIC
+  group: Lung
 parameters:
   # num_iterations: [8, 16, 24]
   num_iterations: [8]
@@ -13,6 +13,6 @@ parameters:
   n_ways: [1]
   k_shots: [3, 5, 10, 15]
   subsample: [1]
-  dataset: [isic]
+  dataset: [lung]
 
 other_grids:

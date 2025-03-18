@@ -56,7 +56,7 @@ class DatasetLung(Dataset):
             BatchKeys.FLAG_EXAMPLES: flag_examples,
             BatchKeys.DIMS: torch.tensor([img.shape[-2:] for img in images]),
             BatchKeys.CLASSES: [[class_sample] for _ in range(len(images))],
-            BatchKeys.IMAGE_IDS: [*[query_name], *[support_names]],
+            BatchKeys.IMAGE_IDS: [*[query_name], *support_names],
             BatchKeys.GROUND_TRUTHS: support_masks[:, 1],
         }
 

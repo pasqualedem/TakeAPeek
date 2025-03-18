@@ -12,5 +12,7 @@
 #SBATCH --job-name=TaP
 #SBATCH --out=out/lora.log
 #SBATCH --err=out/lora.log
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=pasquale.demarinis@uniba.it
 
 srun ./slurm/launch_lora_exe $@
