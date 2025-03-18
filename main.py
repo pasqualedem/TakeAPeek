@@ -25,7 +25,7 @@ class ParallelRun:
     slurm_stderr = "-e"
     slurm_stdout = "-o"
 
-    def __init__(self, params: dict, experiment_timestamp: str, multi_gpu=False):
+    def __init__(self, params: dict, experiment_timestamp: str, multi_gpu=False, only_create=False):
         self.params = params
         self.exp_timestamp = experiment_timestamp
         self.multi_gpu = multi_gpu
@@ -60,7 +60,7 @@ class ParallelRun:
             subprocess.run(command)
 
 
-def parallel_experiment_lora(param_file, multi_gpu=False):
+def parallel_experiment_lora(param_file, multi_gpu=False, only_create=False):
     timestamp = get_timestamp()
     settings = load_yaml(param_file)
     base_grid = settings["parameters"]
@@ -98,7 +98,7 @@ def parallel_experiment_lora(param_file, multi_gpu=False):
         for j, run_params in enumerate(grid):
             print(f"Run {j+1}:")
             run_params['experiment'] = settings["experiment"]
-            run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu)
+            run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu, only_create=only_create)
             run.launch()
 
 
@@ -144,6 +144,7 @@ def parallel_experiment_lora(param_file, multi_gpu=False):
     help="Path to the file containing the parameters for a single run",
 )
 @click.option("--multi_gpu", is_flag=True, show_default=True, default=False, help="Use multiple GPUs")
+@click.option("--only_create", is_flag=True, show_default=True, default=False, help="Only create the SLURM scripts")
 def cli(
     num_iterations,
     device,
@@ -163,13 +164,14 @@ def cli(
     experiment_file,
     parameters,
     multi_gpu,
+    only_create,
 ):
     """
     Command-line interface for setting parameters for LoRA training or testing.
     Collects parameters and passes them as a dictionary.
     """
     if experiment_file is not None:
-        parallel_experiment_lora(experiment_file, multi_gpu)
+        parallel_experiment_lora(experiment_file, multi_gpu, only_create=only_create)
         return
 
     if parameters is not None:
