@@ -178,6 +178,7 @@ def cli(
         params = load_yaml(parameters)
         if "," in params["target_modules"]:
             params["target_modules"] = params["target_modules"].split(",")
+            params["target_modules"] = [mod for mod in params["target_modules"] if len(mod) > 0]
     else:
         # Convert the target_modules string to a list
         if "," in target_modules:
