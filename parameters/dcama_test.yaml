@@ -3,9 +3,10 @@ parameters:
   dataset: [coco]
   num_iterations: [10]
   device: [cuda]
-  lora_r: [128, 256]
+  # lora_r: [8, 16, 32, 128, 256, 512, 1024]
+  lora_r: [8, 16, 32]
   lr: [0.001]
-  target_modules: ["qkv"]
+  target_modules: ["qkv,"]
   lora_dropout: [0.1]
   val_num_samples: [1000]
   val_fold_idx: [0]
@@ -14,4 +15,3 @@ parameters:
   k_shots: [5]
 
 other_grids:
-  
