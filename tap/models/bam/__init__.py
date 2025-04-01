@@ -38,15 +38,21 @@ class BamModel(OneModel):
         )
         return logits
     
-    def forward(self, batch: dict):
+    def forward(self, batch: dict, return_support_feats=False, return_query_feats=False):
         # remove bg from masks
         masks = batch[BatchKeys.PROMPT_MASKS][:, :, 1:, ::]
         y_m = None
         y_b = None
         cat_idx = None
         logits = []
+        query_feats = None
+        support_feats = []
         # get logits for each class
         for c in range(masks.size(2)):
+            kwargs = dict(
+                return_query_feats=return_query_feats and c == 0,
+                return_support_feats=return_support_feats,
+            )
             class_examples = batch[BatchKeys.FLAG_EXAMPLES][:, :, c + 1]
             x = batch[BatchKeys.IMAGES][:, 0]
             s_x = batch[BatchKeys.IMAGES][:, 1:][class_examples].unsqueeze(0)
@@ -55,7 +61,10 @@ class BamModel(OneModel):
             if n_shots < self.shot: # if n_shots < self.shot repeat the last image and mask
                 s_x = torch.cat([s_x, s_x[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1, 1)], dim=1)
                 s_y = torch.cat([s_y, s_y[:, -1].unsqueeze(0).repeat(1, self.shot - n_shots, 1, 1)], dim=1)
-            logits.append(super().forward(x, s_x, s_y, y_m, y_b, cat_idx))
+            res = super().forward(x, s_x, s_y, y_m, y_b, cat_idx, **kwargs)
+            query_feats = res.get(ResultDict.QUERY_FEATS, query_feats)
+            support_feats.append(res.get(ResultDict.SUPPORT_FEATS, None))
+            logits.append(res[ResultDict.LOGITS])
         logits = torch.stack(logits, dim=1)
         fg_logits = logits[:, :, 1, ::]
         bg_logits = logits[:, :, 0, ::]
@@ -64,10 +73,14 @@ class BamModel(OneModel):
         logits = torch.cat([bg_logits, fg_logits], dim=1)
         logits = self.postprocess_masks(logits, batch["dims"])
 
-        return {
+        res = {
             ResultDict.LOGITS: logits,
         }
-
+        if return_query_feats is not None:
+            res[ResultDict.QUERY_FEATS] = query_feats
+        if return_support_feats:
+            res[ResultDict.SUPPORT_FEATS] = support_feats
+        return res
 
 def build_bam(dataset="coco", shots=1, val_fold_idx=0):
     args = EasyDict({

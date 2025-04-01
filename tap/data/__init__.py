@@ -1,3 +1,4 @@
+import copy
 import torch
 
 from torch.utils.data import DataLoader
@@ -52,6 +53,7 @@ def get_preprocessing(params):
 
 def get_dataloaders(dataset_args, dataloader_args, num_processes):
     preprocess = get_preprocessing(dataset_args)
+    dataloader_args = copy.deepcopy(dataloader_args)
 
     datasets_params = dataset_args.get("datasets")
     common_params = dataset_args.get("common")

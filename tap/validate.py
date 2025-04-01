@@ -1,3 +1,4 @@
+import logging
 import os
 import wandb
 import random
@@ -5,7 +6,8 @@ from einops import rearrange
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-from peft import LoraConfig, get_peft_model
+from peft import (get_peft_model, PeftType
+    )
 from copy import deepcopy
 import torchvision
 from transformers import ViTMAEForPreTraining
@@ -14,6 +16,7 @@ from tqdm import tqdm
 from mmengine.utils.dl_utils.parrots_wrapper import SyncBatchNorm
 
 import yaml
+from tap.adapters import PEFT_CONFIGS, get_peft_config
 from tap.loss import FSSLoss
 from tap.utils.metrics import (
     DistributedMulticlassJaccardIndex,
@@ -43,6 +46,7 @@ substitutor_cls = {
     "default": Substitutor,
     "incremental": IncrementalSubstitutor,
 }
+
 
 COCO_PARAMS = {
             "name": "coco",
@@ -472,15 +476,16 @@ def main(params):
     )
     val = val_dict[dataset_name]
     val = accelerator.prepare(val)
-
-    lora_config = LoraConfig(
+    
+    peft_params = dict(
         r=lora_r,
         lora_alpha=lora_alpha,
         target_modules=target_modules,
         lora_dropout=lora_dropout,
         bias="none",
-        # modules_to_save=["classifier"],
     )
+
+    lora_config = get_peft_config(params.get("peft_type", "lora"), peft_params)
 
     folder = "offline"
     os.makedirs(folder, exist_ok=True)
@@ -502,7 +507,8 @@ def main(params):
         os.environ["WANDB_CACHE_DIR"] = cache_dir
         os.environ["WANDB_CONFIG_DIR"] = cache_dir
         os.environ["WANDB_DATA_DIR"] = cache_dir
-        tracker = wandb.init(project="lorafss", config=params, )
+        group = params.get("experiment", {}).get("group", None)
+        tracker = wandb.init(project="lorafss", config=params, group=group)
     else:
         tracker = FakeTracker()
 

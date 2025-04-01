@@ -36,7 +36,7 @@ class DCAMA(nn.Module):
         elif backbone == 'swin':
             self.feature_extractor = SwinTransformer(img_size=384, patch_size=4, window_size=12, embed_dim=128,
                                             depths=[2, 2, 18, 2], num_heads=[4, 8, 16, 32])
-            self.feature_extractor.load_state_dict(torch.load(pretrained_path)['model'])
+            self.feature_extractor.load_state_dict(torch.load(pretrained_path, map_location='cpu')['model'])
             self.feat_channels = [128, 256, 512, 1024]
             self.nlayers = [2, 2, 18, 2]
         else:
@@ -101,7 +101,7 @@ class DCAMA(nn.Module):
 
         return feats
 
-    def predict_mask_nshot(self, batch, nshot):
+    def predict_mask_nshot(self, batch, nshot, return_query_feats=False, return_support_feats=False):
         r""" n-shot inference """
         query_img = batch[BatchKeys.IMAGES][:, 0]
         support_imgs = batch[BatchKeys.IMAGES][:, 1:]
@@ -128,6 +128,14 @@ class DCAMA(nn.Module):
             logit_mask = F.interpolate(logit_mask, org_qry_imsize, mode='bilinear', align_corners=True)
         else:
             logit_mask = F.interpolate(logit_mask, support_imgs[0].size()[2:], mode='bilinear', align_corners=True)
+
+        if return_query_feats or return_support_feats:
+            if return_query_feats and return_support_feats:
+                return logit_mask, (query_feats, n_support_feats)
+            elif return_query_feats:
+                return logit_mask, query_feats
+            else:
+                return logit_mask, n_support_feats
 
         return logit_mask
 

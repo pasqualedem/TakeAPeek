@@ -20,7 +20,7 @@ def build_dcama(
         backbone, backbone_checkpoint, use_original_imgsize=False, image_size=image_size
     )
     params = model.state_dict()
-    state_dict = torch.load(model_checkpoint)
+    state_dict = torch.load(model_checkpoint, map_location="cpu")
 
     for k1, k2 in zip(list(state_dict.keys()), params.keys()):
         state_dict[k2] = state_dict.pop(k1)
@@ -62,7 +62,9 @@ class DCAMAMultiClass(DCAMA):
         # )
         return rearrange(masks, "(b n c) h w -> b n c h w", b=B, n=N)
 
-    def forward(self, x):
+    def forward(self, x, return_query_feats=False, return_support_feats=False):
+        query_feats = None
+        support_feats = []
 
         x[BatchKeys.PROMPT_MASKS] = self._preprocess_masks(
             x[BatchKeys.PROMPT_MASKS], x[BatchKeys.DIMS]
@@ -83,7 +85,16 @@ class DCAMAMultiClass(DCAMA):
                     class_examples
                 ].unsqueeze(0),
             }
-            logits.append(self.predict_mask_nshot(class_input_dict, n_shots))
+            if return_support_feats or return_query_feats:
+                class_logits, extra = self.predict_mask_nshot(class_input_dict, n_shots, return_query_feats, return_support_feats)
+                if c == 0:
+                    query_feats, support_feat = extra
+                else:
+                    _, support_feat = extra
+                support_feats.append(support_feat)
+            else:
+                class_logits = self.predict_mask_nshot(class_input_dict, n_shots)
+            logits.append(class_logits)
         logits = torch.stack(logits, dim=1)
         fg_logits = logits[:, :, 1, ::]
         bg_logits = logits[:, :, 0, ::]
@@ -95,6 +106,8 @@ class DCAMAMultiClass(DCAMA):
 
         return {
             ResultDict.LOGITS: logits,
+            ResultDict.QUERY_FEATS: query_feats,
+            ResultDict.SUPPORT_FEATS: support_feats,
         }
 
     def postprocess_masks(self, logits, dims):

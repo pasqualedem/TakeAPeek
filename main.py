@@ -60,7 +60,7 @@ class ParallelRun:
             subprocess.run(command)
 
 
-def parallel_experiment_lora(param_file, multi_gpu=False, only_create=False):
+def experiment_lora(param_file, multi_gpu=False, only_create=False, sequential=False):
     timestamp = get_timestamp()
     settings = load_yaml(param_file)
     base_grid = settings["parameters"]
@@ -97,9 +97,16 @@ def parallel_experiment_lora(param_file, multi_gpu=False, only_create=False):
         print(f"Grid {i+1}:")
         for j, run_params in enumerate(grid):
             print(f"Run {j+1}:")
-            run_params['experiment'] = settings["experiment"]
-            run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu, only_create=only_create)
-            run.launch()
+            if sequential:
+                run_params['experiment'] = settings["experiment"]
+                if "," in run_params["target_modules"]:
+                    run_params["target_modules"] = run_params["target_modules"].split(",")
+                    run_params["target_modules"] = [mod for mod in run_params["target_modules"] if len(mod) > 0]
+                main(copy.deepcopy(run_params))
+            else:
+                run_params['experiment'] = settings["experiment"]
+                run = ParallelRun(run_params, experiment_timestamp=timestamp, multi_gpu=multi_gpu, only_create=only_create)
+                run.launch()
 
 
 @click.command()
@@ -131,6 +138,7 @@ def parallel_experiment_lora(param_file, multi_gpu=False, only_create=False):
 )
 @click.option("--val_num_samples", default=100, help="Number of samples for validation.")
 @click.option("--val_fold_idx", default=3, help="Fold index for validation.", type=int)
+@click.option("--peft_type", default="lora", help="PEFT type to use (lora, xlora, loha, lokr, adalora)")
 @click.option("--lora_dropout", default=0.1, help="LoRA dropout value.", type=float)
 @click.option("--subsample", default=None, help="Subsample substitutor value.", type=int)
 @click.option(
@@ -145,6 +153,7 @@ def parallel_experiment_lora(param_file, multi_gpu=False, only_create=False):
 )
 @click.option("--multi_gpu", is_flag=True, show_default=True, default=False, help="Use multiple GPUs")
 @click.option("--only_create", is_flag=True, show_default=True, default=False, help="Only create the SLURM scripts")
+@click.option("--sequential", is_flag=True, show_default=True, default=False, help="Run the experiments sequentially")
 def cli(
     num_iterations,
     device,
@@ -153,6 +162,7 @@ def cli(
     lr,
     dataset,
     model,
+    peft_type,
     target_modules,
     lora_dropout,
     subsample,
@@ -165,13 +175,14 @@ def cli(
     parameters,
     multi_gpu,
     only_create,
+    sequential,
 ):
     """
     Command-line interface for setting parameters for LoRA training or testing.
     Collects parameters and passes them as a dictionary.
     """
     if experiment_file is not None:
-        parallel_experiment_lora(experiment_file, multi_gpu, only_create=only_create)
+        experiment_lora(experiment_file, multi_gpu, only_create=only_create, sequential=sequential)
         return
 
     if parameters is not None:
@@ -202,6 +213,7 @@ def cli(
             "val_fold_idx": val_fold_idx,
             "model": model,
             "dataset": dataset,
+            "peft_type": peft_type,
         }
 
     # Call the main function with the dictionary of parameters

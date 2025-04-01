@@ -9,6 +9,8 @@ import random
 import time
 import cv2
 
+from tap.utils.utils import ResultDict
+
 from . import resnet as models
 from . import vgg as vgg_models
 from .ASPP import ASPP
@@ -174,7 +176,7 @@ class OneModel(nn.Module):
 
 
     # que_img, sup_img, sup_mask, que_mask(meta), que_mask(base), cat_idx(meta)
-    def forward(self, x, s_x, s_y, y_m, y_b, cat_idx=None):
+    def forward(self, x, s_x, s_y, y_m, y_b, cat_idx=None, return_query_feats=False, return_support_feats=False):
         x_size = x.size()
         bs = x_size[0]
         h = int((x_size[2] - 1) / 8 * self.zoom_factor + 1)
@@ -329,4 +331,10 @@ class OneModel(nn.Module):
         #     return final_out.max(1)[1], main_loss, aux_loss1, aux_loss2
         # else:
         #     return final_out, meta_out, base_out
-        return final_out
+        res = {ResultDict.LOGITS: final_out}
+        
+        if return_query_feats:
+            res[ResultDict.QUERY_FEATS] = query_feat_4
+        if return_support_feats:
+            res[ResultDict.SUPPORT_FEATS] = final_supp_list
+        return res
