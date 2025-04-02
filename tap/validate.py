@@ -6,8 +6,6 @@ from einops import rearrange
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
-from peft import (get_peft_model, PeftType
-    )
 from copy import deepcopy
 import torchvision
 from transformers import ViTMAEForPreTraining
@@ -16,7 +14,7 @@ from tqdm import tqdm
 from mmengine.utils.dl_utils.parrots_wrapper import SyncBatchNorm
 
 import yaml
-from tap.adapters import PEFT_CONFIGS, get_peft_config
+from tap.adapters import PEFT_CONFIGS, get_peft_config, get_peft_model
 from tap.loss import FSSLoss
 from tap.utils.metrics import (
     DistributedMulticlassJaccardIndex,
