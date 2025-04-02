@@ -1,11 +1,10 @@
 experiment:
-  group: Ablation
+  group: Adapters
 parameters:
   dataset: [coco]
   num_iterations: [10]
   device: [cuda]
-  # lora_r: [8, 16, 32, 64, 128, 256, 512, 1024]
-  lora_r: [64]
+  lora_r: [8, 16, 32, 64]
   lr: [0.001]
   target_modules: ["qkv,"]
   lora_dropout: [0.1]
@@ -14,5 +13,6 @@ parameters:
   model: [dcama]
   n_ways: [1]
   k_shots: [5]
+  peft_type: ["lora", "loha", "lokr"]
 
 other_grids:
