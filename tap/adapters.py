@@ -16,23 +16,14 @@ class DummyConfig:
 
 
 
-class FullModelConfig(DummyConfig):
+class FullRank(DummyConfig):
     """
-    A class to represent a full model configuration.
+    A class to represent a full Rank configuration.
     """
 
     def __repr__(self):
         return f"FullModelConfig({self.params})"
     
-    
-class EncoderConfig(DummyConfig):
-    """
-    A class to represent an encoder configuration.
-    """
-
-    def __repr__(self):
-        return f"EncoderConfig({self.params})"
-
         
 def fix_peft_config(params):
     """
@@ -68,20 +59,20 @@ def get_peft_model(model, config):
     """
     Get the PEFT model based on the peft_type.
     """
-        
-    if isinstance(config, FullModelConfig):
-        # If config is FullModelConfig, return the model as is
-        setattr(model, "targeted_module_names", "All")
-        return model
     
-    if isinstance(config, EncoderConfig):
-        setattr(model, "targeted_module_names", "Encoder")
-        for param in model.parameters():
-            param.requires_grad = False
-        # Set requires_grad=True for the feature extractor
+    if isinstance(config, FullRank):
         
-        for param in model.feature_extractor.parameters():
-            param.requires_grad = True
+        target_modules = config.target_modules
+        target_modules_names = []
+        for name, param in model.named_parameters():
+            if target_modules in name:
+                target_modules_names.append(name)
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+        # Set requires_grad=True for the feature extractor
+
+        setattr(model, "targeted_module_names", target_modules_names)
         return model
     
     return get_peft_model_from_peft(model, config)
@@ -93,6 +84,5 @@ PEFT_CONFIGS = {
     "adalora": AdaLoraConfig,
     "loha": LoHaConfig,
     "lokr": LoKrConfig,
-    "full": FullModelConfig,
-    "encoder": EncoderConfig,
+    "full": FullRank,
 }
