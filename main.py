@@ -99,7 +99,7 @@ def experiment_lora(param_file, multi_gpu=False, only_create=False, sequential=F
             print(f"Run {j+1}:")
             if sequential:
                 run_params['experiment'] = settings["experiment"]
-                if "," in run_params["target_modules"]:
+                if "," in run_params.get("target_modules", []):
                     run_params["target_modules"] = run_params["target_modules"].split(",")
                     run_params["target_modules"] = [mod for mod in run_params["target_modules"] if len(mod) > 0]
                 main(copy.deepcopy(run_params))
@@ -187,7 +187,7 @@ def cli(
 
     if parameters is not None:
         params = load_yaml(parameters)
-        if "," in params["target_modules"]:
+        if "," in params.get("target_modules", []):
             params["target_modules"] = params["target_modules"].split(",")
             params["target_modules"] = [mod for mod in params["target_modules"] if len(mod) > 0]
     else:

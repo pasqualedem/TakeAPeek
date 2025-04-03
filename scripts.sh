@@ -7,3 +7,4 @@ python main.py --experiment_file=parameters/pascal/hdmnet_N2K5.yaml --multi_gpu
 
 python main.py --experiment_file=parameters/dcama_rank_test.yaml
 python main.py --experiment_file=parameters/dcama_adapter_test.yaml
+python main.py --experiment_file=parameters/dcama_encoder_test.yaml
