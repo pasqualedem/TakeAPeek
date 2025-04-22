@@ -13,7 +13,11 @@ class DummyConfig:
         Initialize the DummyConfig with given parameters.
         """
         self.params = kwargs
-
+        
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+            
+        self.target_modules = kwargs.get("target_modules", "")
 
 
 class FullRank(DummyConfig):
@@ -65,7 +69,7 @@ def get_peft_model(model, config):
         target_modules = config.target_modules
         target_modules_names = []
         for name, param in model.named_parameters():
-            if target_modules in name:
+            if any(target_module in name for target_module in target_modules):
                 target_modules_names.append(name)
                 param.requires_grad = True
             else:

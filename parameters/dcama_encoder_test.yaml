@@ -10,6 +10,7 @@ parameters:
   model: [dcama]
   n_ways: [1]
   k_shots: [5]
-  peft_type: ["encoder"]
+  peft_type: ["full"]
+  target_modules: ["qkv,"]
 
 other_grids:
