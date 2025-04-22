@@ -124,4 +124,30 @@ Now run the rename.sh script.
 bash data/script/rename.sh data/pascal/ImageSets/Segmentation/train.txt
 bash data/script/rename.sh data/pascal/ImageSets/Segmentation/trainval.txt
 bash data/script/rename.sh data/pascal/ImageSets/Segmentation/val.txt
-``` 
+```
+
+### CD-FSS Datasets
+Refer to [DMTNet](https://github.com/ChenJiayi68/DMTNet) for the dataset preparation.
+
+
+## Prepare the Pretrained Models
+
+Refer to [DMTNet](https://github.com/ChenJiayi68/DMTNet), [HDMNet](https://github.com/Pbihao/HDMNet), [BAM](https://github.com/chunbolang/BAM) and [Label Anything](https://github.com/pasqualedem/LabelAnything), [DCAMA](https://github.com/pawn-sxy/DCAMA) to download their pretrained models.
+
+Structure them into checkpoints folder as follows:
+```bash
+checkpoints/
+├── bam/
+├── dcama/
+├── hdmnet/
+├── la/
+└── dmtnet.pt
+```
+
+## Run the experiments
+
+You can refer to [scripts](scripts.sh) for the command line arguments. All the experiments configs are contained in the `parameters` folder. You can run the experiments by running the following command:
+
+```bash
+python main.py --experiment_file=parameters/<filename> --sequential
+```
