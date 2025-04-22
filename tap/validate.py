@@ -449,11 +449,7 @@ def main(params):
     dataset = params.get("dataset", "coco")
 
     # Initialize Accelerator
-    accelerator = Accelerator(
-        even_batches=False,
-        # kwargs_handlers=kwargs,
-        split_batches=False,
-    )
+    accelerator = Accelerator()
 
     model, image_size = get_model(
         model_name, dataset=dataset, k_shots=k_shots, val_fold_idx=val_fold_idx

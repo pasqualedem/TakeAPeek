@@ -3,31 +3,23 @@ import torch
 
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
-from tap.data.kvasir import KvarisTestDataset
 from tap.data.transforms import Normalize, Resize
 
 from tap.data.dataset import LabelAnythingDataset, VariableBatchSampler
 from tap.data.coco import CocoLVISTestDataset, CocoLVISDataset
-from tap.data.dram import DramTestDataset, collate_fn as dram_collate
 from tap.data.transforms import CustomNormalize, CustomResize
 from tap.data.utils import get_mean_std
 from tap.data.weedmap import WeedMapTestDataset
-from tap.data.brain_mri import BrainMriTestDataset, BrainTestDataset
 
 
 TEST_DATASETS = {
     "test_coco": CocoLVISTestDataset,
     "test_lvis": CocoLVISTestDataset,
     "test_weedmap": WeedMapTestDataset,
-    "test_dram": DramTestDataset,
-    "test_brain": BrainTestDataset,
-    "test_kvaris": KvarisTestDataset,
 }
 
 
 def map_collate(dataset):
-    if isinstance(dataset, DramTestDataset):
-        return dram_collate
     return dataset.collate_fn if hasattr(dataset, "collate_fn") else None
 
 

@@ -1,5 +1,5 @@
 # CD-FSS
-python main.py --experiment_file=parameters/cross/deepglobe --sequential
+python main.py --experiment_file=parameters/cross/deepglobe.yaml --sequential
 python main.py --experiment_file=parameters/cross/isic.yaml --sequential
 python main.py --experiment_file=parameters/cross/lung.yaml --sequential
 
