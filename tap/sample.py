@@ -116,7 +116,7 @@ path = "offline/wandb/generated-run-y04k97k7/files/best/model.safetensors"
     
 
 def main():
-    train, val_dict, test = get_dataloaders(dataset_args, dataloader_args, num_processes=1)
+    val_dict = get_dataloaders(dataset_args, dataloader_args, num_processes=1)
     val = val_dict['val_coco20i_N2K5']
 
 

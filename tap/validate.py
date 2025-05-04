@@ -465,7 +465,7 @@ def main(params):
     dataset_args["datasets"][dataset_name]["val_fold_idx"] = val_fold_idx
     dataset_args["common"]["image_size"] = image_size
 
-    train, val_dict, test = get_dataloaders(
+    val_dict = get_dataloaders(
         dataset_args, dataloader_args, num_processes=1
     )
     val = val_dict[dataset_name]

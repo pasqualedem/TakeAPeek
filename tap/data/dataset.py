@@ -34,7 +34,7 @@ datasets = {
 }
 
 
-class LabelAnythingDataset(Dataset):
+class FSSDataset(Dataset):
     def __init__(self, datasets_params: Dict, common_params: Dict) -> None:
         """
         Initializes a LabelAnythingDataset Dataset object.

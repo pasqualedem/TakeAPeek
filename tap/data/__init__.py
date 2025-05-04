@@ -5,18 +5,10 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from tap.data.transforms import Normalize, Resize
 
-from tap.data.dataset import LabelAnythingDataset, VariableBatchSampler
+from tap.data.dataset import FSSDataset, VariableBatchSampler
 from tap.data.coco import CocoLVISTestDataset, CocoLVISDataset
 from tap.data.transforms import CustomNormalize, CustomResize
 from tap.data.utils import get_mean_std
-from tap.data.weedmap import WeedMapTestDataset
-
-
-TEST_DATASETS = {
-    "test_coco": CocoLVISTestDataset,
-    "test_lvis": CocoLVISTestDataset,
-    "test_weedmap": WeedMapTestDataset,
-}
 
 
 def map_collate(dataset):
@@ -58,84 +50,34 @@ def get_dataloaders(dataset_args, dataloader_args, num_processes):
     prompt_choice_level = dataloader_args.pop("prompt_choice_level", "batch")
 
     val_prompt_types = dataloader_args.pop("val_prompt_types", prompt_types)
-    num_steps = dataloader_args.pop("num_steps", None)
 
     val_datasets_params = {
         k: v for k, v in datasets_params.items() if k.startswith("val_")
     }
-    test_datasets_params = {
-        k: v for k, v in datasets_params.items() if k.startswith("test_")
-    }
-    train_datasets_params = {
-        k: v
-        for k, v in datasets_params.items()
-        if k not in list(val_datasets_params.keys()) + list(test_datasets_params.keys())
-    }
-    train_dataloader = None
-    if train_datasets_params:
-        train_dataset = LabelAnythingDataset(
-            datasets_params=train_datasets_params,
+
+    val_dataloaders = {}
+    for dataset, params in val_datasets_params.items():
+        splits = dataset.split("_")
+        if len(splits) > 2:
+            dataset_name = "_".join(splits[:2])
+        else:
+            dataset_name = dataset
+        val_dataset = FSSDataset(
+            datasets_params={dataset_name: params},
             common_params={**common_params, "preprocess": preprocess},
         )
-        train_batch_sampler = VariableBatchSampler(
-            train_dataset,
-            possible_batch_example_nums=possible_batch_example_nums,
+        val_batch_sampler = VariableBatchSampler(
+            val_dataset,
+            possible_batch_example_nums=val_possible_batch_example_nums,
             num_processes=num_processes,
-            prompt_types=prompt_types,
-            prompt_choice_level=prompt_choice_level,
-            shuffle=True,
-            num_steps=num_steps,
+            prompt_types=val_prompt_types,
         )
-        train_dataloader = DataLoader(
-            dataset=train_dataset,
+        val_dataloader = DataLoader(
+            dataset=val_dataset,
             **dataloader_args,
-            collate_fn=train_dataset.collate_fn,
-            batch_sampler=train_batch_sampler,
+            collate_fn=val_dataset.collate_fn,
+            batch_sampler=val_batch_sampler,
         )
-    if val_datasets_params:
-        val_dataloaders = {}
-        for dataset, params in val_datasets_params.items():
-            splits = dataset.split("_")
-            if len(splits) > 2:
-                dataset_name = "_".join(splits[:2])
-            else:
-                dataset_name = dataset
-            val_dataset = LabelAnythingDataset(
-                datasets_params={dataset_name: params},
-                common_params={**common_params, "preprocess": preprocess},
-            )
-            val_batch_sampler = VariableBatchSampler(
-                val_dataset,
-                possible_batch_example_nums=val_possible_batch_example_nums,
-                num_processes=num_processes,
-                prompt_types=val_prompt_types,
-            )
-            val_dataloader = DataLoader(
-                dataset=val_dataset,
-                **dataloader_args,
-                collate_fn=val_dataset.collate_fn,
-                batch_sampler=val_batch_sampler,
-            )
-            val_dataloaders[dataset] = val_dataloader
-    else:
-        val_dataloaders = None
-    if test_datasets_params:
-        test_datasets = {
-            dataset: TEST_DATASETS[dataset](**params, preprocess=preprocess)
-            for dataset, params in test_datasets_params.items()
-        }
-        test_dataloaders = {
-            name: DataLoader(
-                dataset=data,
-                **dataloader_args,
-                collate_fn=map_collate(data),
-            )
-            for name, data in test_datasets.items()
-        }
-    else:
-        test_dataloaders = None
-    return (
-        train_dataloader,
-        val_dataloaders,
-        test_dataloaders,
-    )
+        val_dataloaders[dataset] = val_dataloader
+
+    return val_dataloaders
