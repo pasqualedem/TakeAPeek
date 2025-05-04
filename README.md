@@ -1,3 +1,10 @@
+## Prepare the Environment
+You need uv package manager. Install the venv using the following command:
+```bash
+uv sync
+source .venv/bin/activate
+```
+
 ## Prepare the Datasets
 
 Enter the `data` directory, create and enter the directory `coco` and download the COCO 2017 train and val images and the COCO 2014 annotations from the [COCO website](https://cocodataset.org/#download):
