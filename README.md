@@ -161,4 +161,4 @@ python main.py --experiment_file=parameters/<filename> --sequential
 
 
 ## Acknowledgements
-This repository is built on top of [DMTNet](https://github.com/ChenJiayi68/DMTNet), [HDMNet](https://github.com/Pbihao/HDMNet), [BAM](https://github.com/chunbolang/BAM) and [Label Anything](https://github.com/pasqualedem/LabelAnything), [DCAMA](https://github.com/pawn-sxy/DCAMA).
+This repository is built on top of [DMTNet](https://github.com/ChenJiayi68/DMTNet), [HDMNet](https://github.com/Pbihao/HDMNet), [BAM](https://github.com/chunbolang/BAM), [Label Anything](https://github.com/pasqualedem/LabelAnything) and [DCAMA](https://github.com/pawn-sxy/DCAMA).
