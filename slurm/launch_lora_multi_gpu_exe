@@ -1,6 +1,0 @@
-#!/bin/bash
-
-conda init zsh
-conda activate label-anything
-export TMPDIR=./tmp
-accelerate launch main.py $@
