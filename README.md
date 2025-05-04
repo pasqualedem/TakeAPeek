@@ -121,9 +121,9 @@ This is how the dataset should look like
 ### 4. Rename
 Now run the rename.sh script.
 ``` bash
-bash data/script/rename.sh data/pascal/ImageSets/Segmentation/train.txt
-bash data/script/rename.sh data/pascal/ImageSets/Segmentation/trainval.txt
-bash data/script/rename.sh data/pascal/ImageSets/Segmentation/val.txt
+bash tap/data/script/rename.sh data/pascal/ImageSets/Segmentation/train.txt
+bash tap/data/script/rename.sh data/pascal/ImageSets/Segmentation/trainval.txt
+bash tap/data/script/rename.sh data/pascal/ImageSets/Segmentation/val.txt
 ```
 
 ### CD-FSS Datasets
