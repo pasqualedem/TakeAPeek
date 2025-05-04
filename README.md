@@ -151,3 +151,7 @@ You can refer to [scripts](scripts.sh) for the command line arguments. All the e
 ```bash
 python main.py --experiment_file=parameters/<filename> --sequential
 ```
+
+
+## Acknowledgements
+This repository is built on top of [DMTNet](https://github.com/ChenJiayi68/DMTNet), [HDMNet](https://github.com/Pbihao/HDMNet), [BAM](https://github.com/chunbolang/BAM) and [Label Anything](https://github.com/pasqualedem/LabelAnything), [DCAMA](https://github.com/pawn-sxy/DCAMA).
