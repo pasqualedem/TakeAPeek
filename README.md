@@ -61,7 +61,7 @@ Setting up [PASCAL VOC 2012](http://host.robots.ox.ac.uk/pascal/VOC/) Dataset wi
 
 ### 1. Instruction to download
 ``` bash
-bash data/script/setup_voc12.sh data/pascal
+bash tap/data/script/setup_voc12.sh data/pascal
 ``` 
 ```bash
 data/
