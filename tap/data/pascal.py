@@ -23,7 +23,6 @@ from tap.data.utils import (
     flags_merge,
 )
 from tap.data.transforms import PromptsProcessor
-from tap.data.test import LabelAnythingTestDataset
 from tap.logger.text_logger import get_logger
 import os
 

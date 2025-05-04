@@ -13,22 +13,12 @@ from transformers.configuration_utils import PretrainedConfig
 from .common import LayerNorm2d
 from .common import SAM_EMBED_DIM
 from .hfhub import has_config
-from .lam import MultiLevelLam
-from .mask_decoder import AffinityDecoder, MultiLevelMaskDecoder
-from .prompt_encoder import MultiLevelPromptEncoder
-from .transformer import AffinityTransformer
+from .lam import BinaryLam, Lam, MultiLevelLam
+from .mask_decoder import AffinityDecoder, MaskDecoderLam, MultiLevelMaskDecoder
+from .prompt_encoder import MultiLevelPromptEncoder, PromptImageEncoder, RandomMatrixEncoder
+from .transformer import AffinityTransformer, TwoWayTransformer
 
-from . import (
-    ImageEncoderViT,
-    MaskDecoderLam,
-    PromptImageEncoder,
-    Lam,
-    BinaryLam,
-    IdentityTransformer,
-    OneWayTransformer,
-    TwoWayTransformer,
-    RandomMatrixEncoder,
-)
+
 from .build_encoder import (
     ENCODERS,
     build_encoder,

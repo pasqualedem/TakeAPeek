@@ -7,7 +7,6 @@ import click
 
 from tap.utils.grid import linearize, make_grid
 from tap.utils.utils import get_timestamp, load_yaml, nested_dict_update, write_yaml
-from tap.sample import main as lora_sample_main
 from tap.validate import main as lora_validate_main
 from tap.logger.text_logger import get_logger
 

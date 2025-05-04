@@ -9,7 +9,7 @@ from torch import Tensor, nn
 
 from typing import Tuple, Type
 
-from tap.models.common import Attention
+from .common import Attention
 
 from .common import AttentionMLPBlock, MLPBlock
 

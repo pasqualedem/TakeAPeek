@@ -12,8 +12,8 @@ from torch import nn
 from torch.nn import functional as F
 
 from tap.data.utils import BatchKeys, get_preprocess_shape
-from tap.models.transformer import TwoWayTransformer
-from tap.models.common import SAM_EMBED_DIM
+from .transformer import TwoWayTransformer
+from .common import SAM_EMBED_DIM
 from tap.utils.utils import ResultDict
 
 from .image_encoder import ImageEncoderViT

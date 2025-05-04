@@ -6,8 +6,6 @@ from torchvision.transforms import Compose, ToTensor
 from tap.data.transforms import Normalize, Resize
 
 from tap.data.dataset import FSSDataset, VariableBatchSampler
-from tap.data.coco import CocoLVISTestDataset, CocoLVISDataset
-from tap.data.transforms import CustomNormalize, CustomResize
 from tap.data.utils import get_mean_std
 
 
