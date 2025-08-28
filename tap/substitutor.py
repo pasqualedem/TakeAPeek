@@ -14,6 +14,7 @@ def divide_query_examples(
     list_keys_to_exchange,
     torch_keys_to_separate,
     list_keys_to_separate,
+    torch_keys_to_not_subsample,
     subsample=None,
 ):
     batch_examples = {key: batch[key][:, 1:] for key in torch_keys_to_separate}
@@ -40,7 +41,7 @@ def divide_query_examples(
             (list_keys_to_exchange, list_keys_to_separate),
         ]:
             for key in key_set:
-                if key in batch_examples:
+                if key in batch_examples and key not in torch_keys_to_not_subsample:
                     indices = (
                         index_tensor if key in separate_keys else query_index_tensor
                     )
@@ -111,6 +112,7 @@ class Substitutor:
     ]
     list_keys_to_exchange = [BatchKeys.CLASSES, BatchKeys.IMAGE_IDS]
     list_keys_to_separate = []
+    torch_keys_to_not_subsample = [BatchKeys.DIMS]
 
     def __init__(
         self,
@@ -160,6 +162,7 @@ class Substitutor:
             self.list_keys_to_exchange,
             self.torch_keys_to_separate,
             self.list_keys_to_separate,
+            self.torch_keys_to_not_subsample,
             subsample=self.subsample if not self.query_iteration else None, # Only subsample after first iteration
         )
 

@@ -243,6 +243,26 @@ def get_dmtnet(k_shots, val_fold_idx, **kwargs):
     return dmtnet, image_size
 
 
+def get_dcama_ada(dataset, val_fold_idx, k_shots, **kwargs):
+    name = "dcama_ada"
+    adapter_params = dict(
+        adapter_weight=0.1,
+        hidden_ratio=32,
+        drop_ratio=0.4,
+        momentum=0.99
+    )
+    
+    params = dict(
+        backbone_checkpoint="checkpoints/dcama/swin_base_patch4_window12_384.pth",
+        model_checkpoint=f"checkpoints/dcama/{dataset}/swin_fold{val_fold_idx}.pt",
+        fold=val_fold_idx,
+        benchmark=dataset,
+        adapter_params=adapter_params
+    )
+    image_size = 384
+    return model_registry[name](**params), image_size
+
+
 def get_model(model_name, **kwargs):
     supported_models = {
         "label_anything": get_la,
@@ -250,6 +270,7 @@ def get_model(model_name, **kwargs):
         "bam": get_bam,
         "hdmnet": get_hdmnet,
         "dmtnet": get_dmtnet,
+        "dcama_ada": get_dcama_ada,
     }
     return supported_models[model_name](**kwargs)
 
@@ -330,8 +351,10 @@ class LoraEvaluator:
                 self.optimizer.zero_grad()
                 if i == 0:
                     with torch.no_grad():
+                        self.lora_model.eval()
                         res = self.lora_model(batch)
                         loss_value = self.loss(res, gt)
+                        self.lora_model.train()
                 else:
                     res = self.lora_model(batch)
                     loss_value = self.loss(res, gt)
