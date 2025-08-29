@@ -13,17 +13,14 @@ def build_dcama_ada(
     backbone: str = "swin",
     backbone_checkpoint: str = "checkpoints/backbone.pth",
     model_checkpoint: str = "checkpoints/dcama.pth",
-    image_size: int = 384,
-    benchmark: str = None,
     fold: int = None,
     adapter_params: dict = {},
-    nshot: int = 1,
-    custom_preprocess: bool = False,
+    nways: int = 1,
 ):
     model = DCAMAMultiClass_Ada(
         backbone=backbone,
         backbone_checkpoint=backbone_checkpoint,
-        benchmark=benchmark,
+        nways=nways,
         fold=fold,
         adapter_params=adapter_params,
     )
@@ -42,11 +39,11 @@ def build_dcama_ada(
 
 class DCAMAMultiClass_Ada(DCAMA_AdaptiveFSS):
     def __init__(
-        self, backbone, backbone_checkpoint, benchmark, fold, adapter_params
+        self, backbone, backbone_checkpoint, nways, fold, adapter_params
     ):
         self.predict = None
         self.generate_class_embeddings = None
-        super().__init__(backbone, backbone_checkpoint, benchmark, fold, adapter_params)
+        super().__init__(backbone, backbone_checkpoint, nways, fold, adapter_params)
 
     def _preprocess_masks(self, masks, dims):
         B, N, C, H, W = masks.size()
@@ -90,7 +87,7 @@ class DCAMAMultiClass_Ada(DCAMA_AdaptiveFSS):
         # get logits for each class
         for c in range(x[BatchKeys.PROMPT_MASKS].size(2)):
             class_examples = x[BatchKeys.FLAG_EXAMPLES][:, :, c + 1]
-            class_idx = [c for _ in x["classes"]]
+            class_idx = [c for _ in x["classes"]] if self.training else None
             class_input_dict = {
                 BatchKeys.IMAGES: torch.cat(
                     [query, support[class_examples].unsqueeze(0)], dim=1
@@ -99,10 +96,7 @@ class DCAMAMultiClass_Ada(DCAMA_AdaptiveFSS):
                     class_examples
                 ].unsqueeze(0),
             }
-            if self.training:
-                class_logits = super().forward(class_input_dict, class_idx=class_idx)
-            else:
-                class_logits = super().forward_5shot_test(class_input_dict, class_idx=class_idx)
+            class_logits = super().forward(class_input_dict, class_idx=class_idx)
             logits.append(class_logits)
         logits = torch.stack(logits, dim=1)
         fg_logits = logits[:, :, 1, ::]

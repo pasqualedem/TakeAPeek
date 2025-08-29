@@ -689,7 +689,7 @@ class BasicLayer(nn.Module):
         use_checkpoint=False,
         whether_adapter=False,
         adapter_params={},
-        benchmark=None,
+        nways=None,
         fold=None
     ):
 
@@ -733,15 +733,7 @@ class BasicLayer(nn.Module):
         self.whether_adapter = whether_adapter
 
         if whether_adapter:
-            if benchmark == "coco":
-                self.class_num = 20
-            elif benchmark == "pascal":
-                self.class_num = 5
-            elif benchmark == "coco2pascal":
-                if self.fold in [0, 2]:
-                    self.class_num = 6
-                elif self.fold in [1, 3]:
-                    self.class_num = 4
+            self.class_num = nways
             self.adapter_blocks = nn.ModuleList()
             self.gap = 6
             for i in range(depth):
@@ -924,7 +916,7 @@ class SwinTransformer(nn.Module):
         use_checkpoint=False,
         feat_ids=[1, 2, 3, 4],
         adapter_params={},
-        benchmark=None,
+        nways=None,
         fold=None,
         **kwargs,
     ):
@@ -937,11 +929,7 @@ class SwinTransformer(nn.Module):
         self.patch_norm = patch_norm
         self.num_features = int(embed_dim * 2 ** (self.num_layers - 1))
         self.mlp_ratio = mlp_ratio
-        if benchmark == "coco":
-            self.class_num = 20
-        elif benchmark == "pascal":
-            self.class_num = 5
-
+        self.class_num = nways
         # split image into non-overlapping patches
         self.patch_embed = PatchEmbed(
             img_size=img_size,
@@ -995,7 +983,7 @@ class SwinTransformer(nn.Module):
                 downsample=PatchMerging if (i_layer < self.num_layers - 1) else None,
                 use_checkpoint=use_checkpoint,
                 adapter_params=adapter_params,
-                benchmark=benchmark,
+                nways=nways,
                 fold=fold
             )
             self.layers.append(layer)

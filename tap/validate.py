@@ -243,7 +243,7 @@ def get_dmtnet(k_shots, val_fold_idx, **kwargs):
     return dmtnet, image_size
 
 
-def get_dcama_ada(dataset, val_fold_idx, k_shots, **kwargs):
+def get_dcama_ada(dataset, val_fold_idx, n_ways, **kwargs):
     name = "dcama_ada"
     adapter_params = dict(
         adapter_weight=0.1,
@@ -256,7 +256,7 @@ def get_dcama_ada(dataset, val_fold_idx, k_shots, **kwargs):
         backbone_checkpoint="checkpoints/dcama/swin_base_patch4_window12_384.pth",
         model_checkpoint=f"checkpoints/dcama/{dataset}/swin_fold{val_fold_idx}.pt",
         fold=val_fold_idx,
-        benchmark=dataset,
+        nways=n_ways,
         adapter_params=adapter_params
     )
     image_size = 384
@@ -475,7 +475,7 @@ def main(params):
     accelerator = Accelerator()
 
     model, image_size = get_model(
-        model_name, dataset=dataset, k_shots=k_shots, val_fold_idx=val_fold_idx
+        model_name, dataset=dataset, n_ways=n_ways, k_shots=k_shots, val_fold_idx=val_fold_idx
     )
     model = accelerator.prepare(model)
     

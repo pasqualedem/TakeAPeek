@@ -18,7 +18,7 @@ import numpy as np
 class DCAMA_AdaptiveFSS(nn.Module):
 
     def __init__(
-        self, backbone, backbone_checkpoint, benchmark, fold, adapter_params
+        self, backbone, backbone_checkpoint, nways, fold, adapter_params
     ):
         super(DCAMA_AdaptiveFSS, self).__init__()
 
@@ -38,7 +38,7 @@ class DCAMA_AdaptiveFSS(nn.Module):
                 depths=[2, 2, 18, 2],
                 num_heads=[4, 8, 16, 32],
                 adapter_params=adapter_params,
-                benchmark=benchmark,
+                nways=nways,
                 fold=fold,
             )
             self.feat_channels = [128, 256, 512, 1024]
@@ -59,12 +59,8 @@ class DCAMA_AdaptiveFSS(nn.Module):
             in_channels=self.feat_channels, stack_ids=self.stack_ids
         )
         self.fold = fold
-        self.benchmark = benchmark
-        if benchmark == "coco":
-            self.class_num = 20
-        elif benchmark == "pascal":
-            self.class_num = 5
-
+        self.class_num = nways
+        
         self.cross_entropy_loss = nn.CrossEntropyLoss()
 
     def init_adapter(self, std):
@@ -75,87 +71,87 @@ class DCAMA_AdaptiveFSS(nn.Module):
                     init_value += torch.normal(0, std, size=param.size())
                     param.copy_(init_value)
 
+    # def forward(self, batch, class_idx=None):
+    #     """
+    #     Parameters
+    #     ----------
+    #     x: torch.Tensor
+    #             [B, C, H, W], query image
+    #     s_x: torch.Tensor
+    #             [B, C, H, W],    support image   one-shot
+    #             [B, S, C, H, W], support image   few-shot (S)
+    #     s_y: torch.Tensor
+    #             [B, H, W],    support mask    one-shot
+    #             [B, S, H, W], support mask    few-shot (S)
+    #     y: torch.Tensor
+    #             [B, 1, H, W], query mask, used for calculating the pair-wise loss
+    #     Returns
+    #     -------
+    #     output:
+    #             [B, 2, H, W]: torch.Tensor
+    #     """
+
+    #     query_img = batch[BatchKeys.IMAGES][:, 0]
+    #     support_img = batch[BatchKeys.IMAGES][:, 1:]
+    #     support_mask = batch[BatchKeys.PROMPT_MASKS]
+    #     nshot = support_img.shape[1]
+    #     B, C, H, W = query_img.size()
+
+    #     support_img = rearrange(support_img, "b s c h w -> (b s) c h w")
+    #     support_mask = F.interpolate(support_mask, size=(H, W), mode="nearest")
+
+    #     if support_img.shape[1] != 1:
+    #         support_img = support_img.view(B * nshot, C, H, W)  # ----> [BS,C,H,W]
+    #         support_mask_for_adapter = support_mask.view(
+    #             B * nshot, H, W
+    #         ).unsqueeze(1)
+    #     else:
+    #         support_img = support_img.squeeze(1)
+    #         support_mask_for_adapter = support_mask
+    #     self.BxS = support_img.shape[0]
+
+    #     if class_idx is not None:
+    #         if self.benchmark == "coco":
+    #             class_idx_new = [(c - self.fold) // 4 for c in class_idx]
+    #         elif self.benchmark == "pascal":
+    #             class_idx_new = class_idx - (self.fold * self.class_num)
+    #         elif self.benchmark == "coco2pascal":
+    #             class_idx_new = class_idx.clone()
+    #             change_list_1 = torch.tensor([0, 3, 8, 10, 11, 14]).cuda()
+    #             change_list_2 = torch.tensor([1, 5, 12, 17]).cuda()
+    #             change_list_3 = torch.tensor([2, 6, 15, 16, 18, 19]).cuda()
+    #             change_list_4 = torch.tensor([4, 7, 9, 13]).cuda()
+    #             for i, idx in enumerate(class_idx):
+    #                 if self.fold == 0:
+    #                     class_idx_new[i] = torch.nonzero(change_list_1 == class_idx[i])[
+    #                         0
+    #                     ]
+    #                 elif self.fold == 1:
+    #                     class_idx_new[i] = torch.nonzero(change_list_2 == class_idx[i])[
+    #                         0
+    #                     ]
+    #                 elif self.fold == 2:
+    #                     class_idx_new[i] = torch.nonzero(change_list_3 == class_idx[i])[
+    #                         0
+    #                     ]
+    #                 elif self.fold == 3:
+    #                     class_idx_new[i] = torch.nonzero(change_list_4 == class_idx[i])[
+    #                         0
+    #                     ]
+    #     else:
+    #         class_idx_new = class_idx
+
+    #     query_feats, support_feats = self.extract_feats_q_and_sup(
+    #         query_img, support_img, support_mask_for_adapter, class_idx_new
+    #     )
+
+    #     logit_mask = self.model(
+    #         query_feats, support_feats, support_mask.squeeze(1).clone()
+    #     )
+
+    #     return logit_mask
+
     def forward(self, batch, class_idx=None):
-        """
-        Parameters
-        ----------
-        x: torch.Tensor
-                [B, C, H, W], query image
-        s_x: torch.Tensor
-                [B, C, H, W],    support image   one-shot
-                [B, S, C, H, W], support image   few-shot (S)
-        s_y: torch.Tensor
-                [B, H, W],    support mask    one-shot
-                [B, S, H, W], support mask    few-shot (S)
-        y: torch.Tensor
-                [B, 1, H, W], query mask, used for calculating the pair-wise loss
-        Returns
-        -------
-        output:
-                [B, 2, H, W]: torch.Tensor
-        """
-
-        query_img = batch[BatchKeys.IMAGES][:, 0]
-        support_img = batch[BatchKeys.IMAGES][:, 1:]
-        support_mask = batch[BatchKeys.PROMPT_MASKS]
-        nshot = support_img.shape[1]
-        B, C, H, W = query_img.size()
-
-        support_img = rearrange(support_img, "b s c h w -> (b s) c h w")
-        support_mask = F.interpolate(support_mask, size=(H, W), mode="nearest")
-
-        if support_img.shape[1] != 1:
-            support_img = support_img.view(B * nshot, C, H, W)  # ----> [BS,C,H,W]
-            support_mask_for_adapter = support_mask.view(
-                B * nshot, H, W
-            ).unsqueeze(1)
-        else:
-            support_img = support_img.squeeze(1)
-            support_mask_for_adapter = support_mask
-        self.BxS = support_img.shape[0]
-
-        if class_idx is not None:
-            if self.benchmark == "coco":
-                class_idx_new = [(c - self.fold) // 4 for c in class_idx]
-            elif self.benchmark == "pascal":
-                class_idx_new = class_idx - (self.fold * self.class_num)
-            elif self.benchmark == "coco2pascal":
-                class_idx_new = class_idx.clone()
-                change_list_1 = torch.tensor([0, 3, 8, 10, 11, 14]).cuda()
-                change_list_2 = torch.tensor([1, 5, 12, 17]).cuda()
-                change_list_3 = torch.tensor([2, 6, 15, 16, 18, 19]).cuda()
-                change_list_4 = torch.tensor([4, 7, 9, 13]).cuda()
-                for i, idx in enumerate(class_idx):
-                    if self.fold == 0:
-                        class_idx_new[i] = torch.nonzero(change_list_1 == class_idx[i])[
-                            0
-                        ]
-                    elif self.fold == 1:
-                        class_idx_new[i] = torch.nonzero(change_list_2 == class_idx[i])[
-                            0
-                        ]
-                    elif self.fold == 2:
-                        class_idx_new[i] = torch.nonzero(change_list_3 == class_idx[i])[
-                            0
-                        ]
-                    elif self.fold == 3:
-                        class_idx_new[i] = torch.nonzero(change_list_4 == class_idx[i])[
-                            0
-                        ]
-        else:
-            class_idx_new = class_idx
-
-        query_feats, support_feats = self.extract_feats_q_and_sup(
-            query_img, support_img, support_mask_for_adapter, class_idx_new
-        )
-
-        logit_mask = self.model(
-            query_feats, support_feats, support_mask.squeeze(1).clone()
-        )
-
-        return logit_mask
-
-    def forward_5shot_test(self, batch, class_idx=None):
         """
         Parameters
         ----------
@@ -185,43 +181,24 @@ class DCAMA_AdaptiveFSS(nn.Module):
 
         self.BxS = support_img.shape[0]
 
-        if class_idx is not None:
-            if self.benchmark == "coco":
-                class_idx = [(c - self.fold) // 4 for c in class_idx]
-            elif self.benchmark == "pascal":
-                class_idx = [c - (self.fold * self.class_num) for c in class_idx]
-
         feats_q = []
         feats_sup = []
         if self.backbone == "swin":
-            _, feat_maps_q, feat_maps_sup = (
-                self.feature_extractor.forward_features_query_and_sup_branch(
-                    query_img,
-                    support_img,
-                    support_mask_for_adapter,
-                    self.stack_ids,
-                    class_idx,
-                )
+            feats_q, feats_sup = self.extract_feats_q_and_sup(
+                query_img, support_img, support_mask_for_adapter, class_idx
             )
-            for feat_q, feat_sup in zip(feat_maps_q, feat_maps_sup):
-                bsz, hw, c = feat_q.size()
-                h = int(hw**0.5)
-
-                feat_q = feat_q.view(bsz, h, h, c).permute(0, 3, 1, 2).contiguous()
-                feat_sup = (
-                    feat_sup.view(self.BxS, h, h, c).permute(0, 3, 1, 2).contiguous()
-                )
-                feats_q.append(feat_q)
-                feats_sup.append(feat_sup)
-        new_support_feats = []
-        for shot in range(nshot):
-            feas_each_shot = []
-            for feas in feats_sup:
-                _, C, H, W = feas.shape
-                feas_each_shot.append(
-                    feas.view(B, nshot, C, H, W)[:, shot, :, :, :]
-                )
-            new_support_feats.append(feas_each_shot)
+        if nshot == 1:
+            new_support_feats = feats_sup
+        else:
+            new_support_feats = []
+            for shot in range(nshot):
+                feas_each_shot = []
+                for feas in feats_sup:
+                    _, C, H, W = feas.shape
+                    feas_each_shot.append(
+                        feas.view(B, nshot, C, H, W)[:, shot, :, :, :]
+                    )
+                new_support_feats.append(feas_each_shot)
         logit_mask = self.model(
             feats_q, new_support_feats, support_mask.clone(), nshot
         )
@@ -240,9 +217,10 @@ class DCAMA_AdaptiveFSS(nn.Module):
             )
             for feat_q, feat_sup in zip(feat_maps_q, feat_maps_sup):
                 bsz, hw, c = feat_q.size()
+                k = feat_maps_sup[0].shape[0]
                 h = int(hw**0.5)
                 feat_q = feat_q.view(bsz, h, h, c).permute(0, 3, 1, 2).contiguous()
-                feat_sup = feat_sup.view(bsz, h, h, c).permute(0, 3, 1, 2).contiguous()
+                feat_sup = feat_sup.view(bsz*k, h, h, c).permute(0, 3, 1, 2).contiguous()
                 feats_q.append(feat_q)
                 feats_sup.append(feat_sup)
 
@@ -383,7 +361,7 @@ class DCAMA_model(nn.Module):
             if nshot == 1:
                 support_feat = support_feats[idx]
                 mask = F.interpolate(
-                    support_mask.unsqueeze(1).float(),
+                    support_mask.float(),
                     support_feat.size()[2:],
                     mode="bilinear",
                     align_corners=True,
