@@ -12,6 +12,7 @@ dependencies = [
     "imageio>=2.37.0",
     "lovely-tensors>=0.1.18",
     "mmcv>=2.2.0",
+    "notebook>=7.4.5",
     "peft>=0.15.2",
     "pycocotools>=2.0.8",
     "ruamel-yaml>=0.18.10",

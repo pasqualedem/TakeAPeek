@@ -1,5 +1,6 @@
 
 parameters:
+  dataset: [coco]
   num_iterations: [8]
   device: [cuda]
   lr: [0.01]

@@ -3,14 +3,14 @@ parameters:
   dataset: [coco]
   num_iterations: [8]
   device: [cuda]
-  lr: [0.005]
+  lr: [0.1, 0.05, 0.01, 0.005]
   val_num_samples: [5000]
-  val_fold_idx: [0, 1, 2, 3]
+  val_fold_idx: [0]
   model: [dcama_ada]
   n_ways: [1]
   k_shots: [5]
   peft_type: ["full"]
-  subsample: [null]
+  subsample: [null, 1]
   target_modules: [["adapter_blocks"]]
 
 other_grids:
