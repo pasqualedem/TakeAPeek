@@ -175,6 +175,17 @@ class Substitutor:
             ),
         }
         return batch, gt
+    
+    def same_query_support_iteration(self):
+        """
+        In case of single image in the batch, the only support image will duplicated also as query.
+        """
+        batch = {
+            **self.batch,
+            "images": torch.cat([self.batch["images"], self.batch["images"]], dim=1),
+            "dims": torch.cat([self.batch["dims"], self.batch["dims"], self.query_image_gt_dim[2].unsqueeze(1)], dim=1),
+        }
+        return batch, self.ground_truths[0]
 
     def get_batch_info(self):
         num_images = self.batch["images"].shape[1]
@@ -201,7 +212,10 @@ class Substitutor:
             return self._query_iteration()
         if self.it == 0:
             self.it = 1
-            return self.divide_query_examples_append_query_dim()
+            if num_images == 1:
+                return self.same_query_support_iteration()
+            else:
+                return self.divide_query_examples_append_query_dim()
 
         if not self.substitute:
             raise StopIteration

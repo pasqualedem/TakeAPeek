@@ -1,0 +1,17 @@
+experiment:
+  group: OneShot
+parameters:
+  dataset: [coco]
+  num_iterations: [20]
+  device: [cuda]
+  lora_r: [64]
+  lr: [0.001]
+  target_modules: ["qkv,"]
+  lora_dropout: [0.1]
+  val_num_samples: [5000]
+  val_fold_idx: [0, 1, 2, 3]
+  model: [dcama]
+  n_ways: [1]
+  k_shots: [1]
+
+other_grids:
