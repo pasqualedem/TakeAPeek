@@ -17,3 +17,14 @@ python main.py --experiment_file=parameters/pascal/dcama_N2K5.yaml --sequential
 python main.py --experiment_file=parameters/dcama_rank_test.yaml --sequential
 python main.py --experiment_file=parameters/dcama_adapter_test.yaml --sequential
 python main.py --experiment_file=parameters/dcama_encoder_test.yaml --sequential
+
+# Computational
+
+python main.py --experiment_file=parameters/computation/hdmnet.yaml --sequential
+python main.py --experiment_file=parameters/computation/bam.yaml --sequential
+python main.py --experiment_file=parameters/computation/la.yaml --sequential
+python main.py --experiment_file=parameters/computation/dcama.yaml --sequential
+python main.py --experiment_file=parameters/computation/fptrans.yaml --sequential
+#
+python main.py --experiment_file=parameters/computation/dcama_ada.yaml --sequential
+python main.py --experiment_file=parameters/computation/fptrans_ada.yaml --sequential
