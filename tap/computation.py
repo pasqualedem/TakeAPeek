@@ -132,8 +132,8 @@ def run_test(params: str, use_lora: bool):
         "n_ways": n_ways,
     }
     lora_params = {
-        "lora_r": params.get("lora_r", 64),
-        "lora_alpha": params.get("lora_alpha", None),
+        "r": params.get("lora_r", 64),
+        "lora_alpha": params.get("lora_alpha", params.get("lora_r", 64)),
         "target_modules": params.get("target_modules", None),
         "lora_dropout": params.get("lora_dropout", 0.05),
     }
