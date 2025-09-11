@@ -4,9 +4,9 @@ import torch.nn.functional as F
 import gc
 import sys
 import pandas as pd
-from peft import LoraConfig, get_peft_model
 import wandb
 
+from tap.adapters import get_peft_config, get_peft_model
 from tap.validate import DATASETS, get_model, dataloader_args, dataset_args, get_dataloaders, substitutor_cls
 from tap.data.utils import BatchKeys
 
@@ -33,20 +33,10 @@ def count_trainable_params(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def build_model(model_name: str, params: dict, lora_params: dict, use_lora: bool):
+def build_model(model_name: str, params: dict, peft_type, lora_params: dict):
+    lora_config = get_peft_config(peft_type, lora_params)
     model, image_size = get_model(model_name, **params)
-    if use_lora:
-        lora_config = LoraConfig(
-            r=lora_params["lora_r"],
-            lora_alpha=lora_params["lora_r"],
-            target_modules=lora_params["target_modules"],
-            lora_dropout=lora_params["lora_dropout"],
-            bias="none"
-        )
-        model = get_peft_model(model, lora_config)
-        for name, param in model.named_parameters():
-            if "lora_" not in name:
-                param.requires_grad = False
+    model = get_peft_model(model, lora_config)
     return model, image_size
 
 
@@ -126,6 +116,7 @@ def run_test(params: str, use_lora: bool):
     model_name = params["model"]
     
     batch_size = 1
+    peft_type = params["peft_type"] if use_lora else "full"
     n_ways = params["n_ways"]
     k_shots = params["k_shots"]
     val_num_samples = (n_steps+warmup_steps) * batch_size
@@ -147,8 +138,10 @@ def run_test(params: str, use_lora: bool):
         "lora_dropout": params.get("lora_dropout", 0.05),
     }
 
-    model, image_size = build_model(model_name, model_params, lora_params, use_lora)
+    model, image_size = build_model(model_name, model_params, peft_type, lora_params)
     model = model.to(device)
+
+    print(f"Target modules: {model.targeted_module_names}")
 
     substitutor = substitutor_cls[substitutor](
         substitute=True,

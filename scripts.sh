@@ -31,3 +31,13 @@ python main.py --experiment_file=parameters/coco/fptrans_ada_N1K5.yaml
 python main.py --experiment_file=parameters/coco/fptrans_ada_N2K5.yaml
 python main.py --experiment_file=parameters/pascal/fptrans_ada_N1K5.yaml
 python main.py --experiment_file=parameters/pascal/fptrans_ada_N2K5.yaml
+# Computational
+
+python main.py --experiment_file=parameters/computation/hdmnet.yaml --sequential
+python main.py --experiment_file=parameters/computation/bam.yaml --sequential
+python main.py --experiment_file=parameters/computation/la.yaml --sequential
+python main.py --experiment_file=parameters/computation/dcama.yaml --sequential
+python main.py --experiment_file=parameters/computation/fptrans.yaml --sequential
+#
+python main.py --experiment_file=parameters/computation/dcama_ada.yaml --sequential
+python main.py --experiment_file=parameters/computation/fptrans_ada.yaml --sequential
