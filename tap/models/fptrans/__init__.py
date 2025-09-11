@@ -1,8 +1,14 @@
+import os
+import gdown
+import logging
+
+import torch
+import torch.nn.functional as F
+
 from tap.models.fptrans.FPTrans import FPTrans
 from tap.data.utils import BatchKeys
 from tap.models.fptrans.utils_.misc import interpb, interpn
-import torch
-import logging
+from tap.utils.utils import ResultDict
 
 
 __networks = {
@@ -29,39 +35,162 @@ def load_model(opt, logger, *args, **kwargs):
             f"Not supported network: {opt.network}. {list(__networks.keys())}"
         )
 
+fp_trans_dict = {
+    "pascal": {
+        "ViT-B/16": {
+            1: [1, 2, 3, 4],
+            5: [17, 18, 19, 20],
+        },
+        "DeiT-B/16": {
+            1: [5, 6, 7, 8],
+            5: [21, 22, 23, 24],
+        },
+        "DeiT-S/16": {
+            1: [9, 10, 11, 12],
+        },
+        "DeiT-T/16": {
+            1: [13, 14, 15, 16],
+        },
+    },
+    "coco": {
+        "ViT-B/16": {
+            1: [25, 26, 27, 28],
+            5: [33, 34, 35, 36],
+        },
+        "DeiT-B/16": {
+            1: [29, 30, 31, 32],
+            5: [37, 38, 39, 40],
+        },
+    },
+}
+
+fp_trans_experiment_links = [
+    "1rvO04d4aK4m1zk-LuU20vSibBgHzGF8k",
+    "1p3lQZ79ZHYwco4BsqWINEMjNrSuSxiaI",
+    "1pcoi_mX_ZV0VPwSbtEiAXFejPH2AkiSs",
+    "1_DzwW_mt7RnL8vw2FQc0k4wJcllJ5NXV",
+    "1cQRPeYlM08uah8IipuaL5jvy6JHSGulX",
+    "1D66YBSwo3aVZoRuk4nZBtK7Orgf_t2Dp",
+    "1GetCnMR35x72HHdQX3rnZ9JE0XFttYfB",
+    "1BNIUHWWvKr1Wueq2y5DkIuwbBuoshNct",
+    "1nU6d7Te_dLxAs9cXzf5968pWIGmyqVSg",
+    "1_S54vYuk_-Q__BnIBTmbYROH6T3Zpw6o",
+    "1UXqpduUJfqVRG4OC6r6MSXS1iXvqpjK5",
+    "17DjVlaJ4o8gJVTugDCR2IjhRgSX1FFsN",
+    "1O74FJiQXxbU1hFms1VC7Xu3BzZsrjGsk",
+    "1SyCBt3pjQZ-pxhbUzac2n9ICX6ZbGSeB",
+    "16AKosExMK1U6F4gD-8Tuvw4QcHkAy_dH",
+    "1DZyAwJTsGlC5IAe-QNYO1Vb8KcaHAkgX",
+    "1l3-5oSyCIwF5FAaTpeyVcwP7h3Fzj1eZ",
+    "1-JFQ6kY8FA5iIlBOItWy8UW_lVwlZ_xx",
+    "1TjXp3d5EMb_divw6I3zsgomQKvaLxsRZ",
+    "10-GqdhSe-zUpZo_7qLid8UAu1AQHToxX",
+    "1T4Y0ykABYa8oblVpgESV0F_uPC3iOyoW",
+    "1M2qxpJbZ2d9xUBXVDJ15pioGpzzEyjgo",
+    "1owxRSd92CK9FvCCd6Ty9zDhqRG-5Oc8Q",
+    "13wpVNYgc0-tNZzMpnCGge7v1UypJUDG-",
+    "1cqh1mt7sETkZlQgi_lGDiT57MmDIke2c",
+    "19TkTsFI74E5wm-cdzQfNHxduS3U57VsZ",
+    "1C_psluZWRjUCU1WrUNINa97gN9UoNtph",
+    "1IAdjuFA3T4MkeTRzJb2V0zpW3pdbtZhY",
+    "1DXbwFrs12t0DuDYsB7qR_4Zr7O2b6CaL",
+    "1201WaBHEaykqWI_3CXbkHU-GlkiY5HQd",
+    "1asiKKhOd7YFogkqdM8T5mlSc_Db_QABJ",
+    "1kQaxNUWDtpNK2euF9u9Az3W4A-4Tcp_V",
+    "1A1YmjAk8fcCLtZq8lBD_JMAWFQahsv8Z",
+    "1bS5gXHWXM3unjkKuq2VE8Hgjy6bHC4oR",
+    "14WVbJjXG6M5wQxQ8r9vpqhB3KVKSLIug",
+    "1H4P5ePnO9LivvrA4M51WC1AW5ENq1V99",
+    "1Oa-6G5DhPX19lVMn3IU7Xd5rQWq-NFOt",
+    "1ERsUZ842ENPQdpuWIEITZFxbwPV2AEQH",
+    "1cfVM1mBgL9eHfzwh6-2bg2lN_QZTBtJW",
+    "14WqeDmdqEKRGt9HrkcO4Nyt_feO3f1vo",
+]
+
 
 def build_fptrans(
-    backbone_checkpoint: str = "checkpoints/backbone.pth",
-    model_checkpoint: str = "checkpoints/fptrans.pth",
-    dataset: str = "COCO",  # can be "COCO" or "PASCAL"
+    backbone_checkpoint: str = "",
+    model_checkpoint: str = None,
+    dataset: str = "coco",  # can be "coco" or "pascal"
+    backbone: str = "ViT-B/16",
+    val_fold_idx: int = None,
+    k_shots: int = 5,
 ):
+    
+    bg_num = 5
     opt = {
-        "shot": 1,
+        "shot": k_shots,
         "drop_dim": 1,
         "drop_rate": 0.1,
         "block_size": 4,
         "backbone": "ViT-B/16-384",
         "tqdm": False,
         "height": 480,
-        "bg_num": 5,
-        "num_prompt": 72,
+        "bg_num": bg_num,
+        "num_prompt": 12 * (1 + bg_num * k_shots),
         "vit_stride": None,
-        "dataset": dataset,
+        "dataset": dataset.upper(),
         "coco2pascal": False,
         "pt_std": 0.02,
         "vit_depth": 10,
     }
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
+    
+    if dataset is not None and val_fold_idx is not None and k_shots is not None:
+        experiment_id = fp_trans_dict[dataset][backbone][k_shots][val_fold_idx]
+        model_checkpoint = f"checkpoints/fptrans/{experiment_id}.pth"
+        if os.path.exists(model_checkpoint):
+            print(f"Using original checkpoint from experiment: {experiment_id} with val_fold_idx {val_fold_idx}, k_shots {k_shots} for dataset {dataset} and backbone {backbone}")
+        else:
+            print(f"Downloading checkpoint for experiment: {experiment_id} with val_fold_idx {val_fold_idx}, k_shots {k_shots} for dataset {dataset} and backbone {backbone}")
+            if not os.path.exists("checkpoints/fptrans"):
+                os.makedirs("checkpoints/fptrans")
+            gdown.download(
+                id=fp_trans_experiment_links[experiment_id - 1],
+                output=model_checkpoint,
+                quiet=False
+            )
 
     opt = dotdict(opt)
-    model = FPTrans(opt, logger, backbone_checkpoint)
+    model = FPTransMultiClass(opt, logger, backbone_checkpoint)
     model.load_weights(model_checkpoint, logger)
 
     return model
 
 
 class FPTransMultiClass(FPTrans):
+    def postprocess_masks(self, logits, dims):
+        max_dims = torch.max(dims.view(-1, 2), 0).values.tolist()
+        dims = dims[:, 0, :]  # get real sizes of the query images
+        logits = [
+            F.interpolate(
+                torch.unsqueeze(logit, 0),
+                size=dim.tolist(),
+                mode="bilinear",
+                align_corners=False,
+            )
+            for logit, dim in zip(logits, dims)
+        ]
+
+        logits = torch.cat(
+            [
+                F.pad(
+                    mask,
+                    (
+                        0,
+                        max_dims[1] - dims[i, 1],
+                        0,
+                        max_dims[0] - dims[i, 0],
+                    ),
+                    mode="constant",
+                    value=float("-inf"),
+                )
+                for i, mask in enumerate(logits)
+            ]
+        )
+        return logits
+    
     def forward(self, x):
         B, M, Ch, H, W = x[BatchKeys.IMAGES].size()
         C = x[BatchKeys.PROMPT_MASKS].size(2)
@@ -69,19 +198,20 @@ class FPTransMultiClass(FPTrans):
 
         q = x[BatchKeys.IMAGES][:, 0]
         s_x = x[BatchKeys.IMAGES][:, 1:]
-        s_y = x[BatchKeys.PROMPT_MASKS][:, 1:]  # B, M, C, H, W
+        s_y = F.interpolate(x[BatchKeys.PROMPT_MASKS], size=(C, H, W), mode="nearest") # B, M, C, H, W
 
         logits = []
 
-        for c in range(C):
+        for c in range(1, C):
             logits.append(super().forward(q, s_x, s_y[:, :, c, :, :], None, None))
-            
 
+        logits = torch.stack([l["out"] for l in logits], dim=1)
+        fg_logits = logits[:, :, 1, ::]
+        bg_logits = logits[:, :, 0, ::]
+        bg_positions = fg_logits.argmax(dim=1)
+        bg_logits = torch.gather(bg_logits, 1, bg_positions.unsqueeze(1))
+        logits = torch.cat([bg_logits, fg_logits], dim=1)
 
-if __name__ == "__main__":
-    model = build_fptrans(
-        "checkpoints/B_16-i1k-300ep-lr_0.001-aug_medium1-wd_0.1-do_0.0-sd_0.0--imagenet2012-steps_20k-lr_0.01-res_384.npz",
-        "checkpoints/fptrans.pth",
-    )
-    print(model)
-    print("Done")
+        logits = self.postprocess_masks(logits, x["dims"])
+        return {ResultDict.LOGITS: logits}
+ 

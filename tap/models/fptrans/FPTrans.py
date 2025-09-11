@@ -317,7 +317,7 @@ class FPTrans(nn.Module):
             strict mode or not
 
         """
-        weights = torch.load(str(ckpt_path), map_location='cpu')
+        weights = torch.load(str(ckpt_path), map_location='cpu', weights_only=False)
         if "model_state" in weights:
             weights = weights["model_state"]
         if "state_dict" in weights:

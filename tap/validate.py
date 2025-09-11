@@ -242,6 +242,17 @@ def get_dmtnet(k_shots, val_fold_idx, **kwargs):
     set_batchnorm_dropout_eval_mode(dmtnet)
     return dmtnet, image_size
 
+def get_fptrans(dataset, val_fold_idx, k_shots, **kwargs):
+    name = "fptrans"
+    params = dict(
+        val_fold_idx=val_fold_idx,
+        k_shots=k_shots,
+        dataset=dataset,
+        backbone="ViT-B/16",
+    )
+    image_size = 480
+    return model_registry[name](**params), image_size
+
 
 def get_dcama_ada(dataset, val_fold_idx, n_ways, **kwargs):
     name = "dcama_ada"
@@ -270,6 +281,7 @@ def get_model(model_name, **kwargs):
         "bam": get_bam,
         "hdmnet": get_hdmnet,
         "dmtnet": get_dmtnet,
+        "fptrans": get_fptrans,
         "dcama_ada": get_dcama_ada,
     }
     return supported_models[model_name](**kwargs)
