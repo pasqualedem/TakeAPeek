@@ -1,0 +1,18 @@
+experiment:
+  group: Computation
+
+parameters:
+  computation_test: [True]
+
+  dataset: [coco]
+  device: [cuda:1]
+  lora_r: [64]
+  lr: [0.001]
+  target_modules: ["qkv,"]
+  val_fold_idx: [0]
+  model: [dcama]
+  n_ways: [1]
+  k_shots: [1, 5]
+
+other_grids:
+

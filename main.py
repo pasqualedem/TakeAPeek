@@ -5,6 +5,7 @@ import sys
 import uuid
 import click
 
+from tap.computation import computation_test
 from tap.utils.grid import linearize, make_grid
 from tap.utils.utils import get_timestamp, load_yaml, nested_dict_update, write_yaml
 from tap.validate import main as lora_validate_main
@@ -153,6 +154,7 @@ def experiment_lora(param_file, multi_gpu=False, only_create=False, sequential=F
 @click.option("--multi_gpu", is_flag=True, show_default=True, default=False, help="Use multiple GPUs")
 @click.option("--only_create", is_flag=True, show_default=True, default=False, help="Only create the SLURM scripts")
 @click.option("--sequential", is_flag=True, show_default=True, default=False, help="Run the experiments sequentially")
+@click.option("--computation_test", is_flag=True, show_default=True, default=False, help="Run the computation test")
 def cli(
     num_iterations,
     device,
@@ -175,6 +177,7 @@ def cli(
     multi_gpu,
     only_create,
     sequential,
+    computation_test
 ):
     """
     Command-line interface for setting parameters for LoRA training or testing.
@@ -228,7 +231,10 @@ def main(params):
     for key, value in params.items():
         click.echo(f"{key}: {value}")
 
-    lora_validate_main(params)
+    if params.get("computation_test", False):
+        computation_test(params)
+    else:
+        lora_validate_main(params)
 
 
 if __name__ == "__main__":

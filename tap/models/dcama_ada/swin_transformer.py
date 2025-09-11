@@ -549,7 +549,7 @@ class Prototype_Adaptive_Module(nn.Module):
             * (N * S)
             / (num_fore_per_batch.unsqueeze(1) + 1e-4)
         )
-        one = torch.ones_like(num_fore_per_batch).cuda()
+        one = torch.ones_like(num_fore_per_batch).to(num_fore_per_batch.device)
         sign_fore_per_batch = torch.where(
             num_fore_per_batch > 0.5, one, num_fore_per_batch
         )
