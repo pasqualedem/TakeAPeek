@@ -285,6 +285,7 @@ def get_fptrans_ada(dataset, val_fold_idx, n_ways, k_shots, **kwargs):
     
     params = dict(
         val_fold_idx=val_fold_idx,
+        n_ways=n_ways,
         k_shots=k_shots,
         dataset=dataset,
         backbone="ViT-B/16",
