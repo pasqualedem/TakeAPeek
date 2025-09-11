@@ -1,16 +1,17 @@
-
+experiment:
+  group: FPTrans
 parameters:
   dataset: [coco]
   num_iterations: [8]
   device: [cuda]
-  lr: [0.005]
+  lora_r: [64]
+  lr: [0.0001]
+  target_modules: ["qkv,"]
+  lora_dropout: [0.1]
   val_num_samples: [5000]
   val_fold_idx: [0, 1, 2, 3]
-  model: [dcama_ada]
-  n_ways: [2]
+  model: [fptrans]
+  n_ways: [1]
   k_shots: [5]
-  peft_type: ["full"]
-  subsample: [null]
-  target_modules: [["adapter_blocks"]]
 
 other_grids:

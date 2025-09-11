@@ -1,5 +1,7 @@
-
+experiment:
+  group: FPTrans
 parameters:
+  dataset: [pascal]
   num_iterations: [8]
   device: [cuda]
   lora_r: [64]
@@ -9,7 +11,7 @@ parameters:
   val_num_samples: [5000]
   val_fold_idx: [0, 1, 2, 3]
   model: [fptrans]
-  n_ways: [1]
+  n_ways: [2]
   k_shots: [5]
 
 other_grids:

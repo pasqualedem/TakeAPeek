@@ -1,4 +1,5 @@
-
+experiment:
+  group: FPTransAda
 parameters:
   dataset: [coco]
   num_iterations: [8]
