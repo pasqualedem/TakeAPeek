@@ -222,7 +222,7 @@ def computation_test(params):
         print("Skipping test without LoRA since lora is set to False in parameters.")
         
     if params.get("lora", True):
-        params["target_modules"] = None  # Use full model for the test without LoRA
+        params["target_modules"] = [""]
 
     tracker = wandb.init(project="lorafss", config={**params, "lora": False}, group=group)
     without_lora_test = run_test(params, use_lora=False)
