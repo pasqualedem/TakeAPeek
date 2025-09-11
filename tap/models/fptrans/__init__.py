@@ -5,6 +5,8 @@ import logging
 import torch
 import torch.nn.functional as F
 
+from einops import rearrange, repeat
+
 from tap.models.fptrans.FPTrans import FPTrans
 from tap.data.utils import BatchKeys
 from tap.models.fptrans.utils_.misc import interpb, interpn
@@ -34,6 +36,7 @@ def load_model(opt, logger, *args, **kwargs):
         raise ValueError(
             f"Not supported network: {opt.network}. {list(__networks.keys())}"
         )
+
 
 fp_trans_dict = {
     "pascal": {
@@ -116,7 +119,12 @@ def build_fptrans(
     val_fold_idx: int = None,
     k_shots: int = 5,
 ):
-    
+
+    if k_shots not in [1, 5]:
+        rounded_k = 1 if k_shots < 3 else 5
+        print(f"Warning: k_shots should be either 1 or 5. Rounding to {rounded_k}.")
+        k_shots = rounded_k
+
     bg_num = 5
     opt = {
         "shot": k_shots,
@@ -136,20 +144,24 @@ def build_fptrans(
     }
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
-    
+
     if dataset is not None and val_fold_idx is not None and k_shots is not None:
         experiment_id = fp_trans_dict[dataset][backbone][k_shots][val_fold_idx]
         model_checkpoint = f"checkpoints/fptrans/{experiment_id}.pth"
         if os.path.exists(model_checkpoint):
-            print(f"Using original checkpoint from experiment: {experiment_id} with val_fold_idx {val_fold_idx}, k_shots {k_shots} for dataset {dataset} and backbone {backbone}")
+            print(
+                f"Using original checkpoint from experiment: {experiment_id} with val_fold_idx {val_fold_idx}, k_shots {k_shots} for dataset {dataset} and backbone {backbone}"
+            )
         else:
-            print(f"Downloading checkpoint for experiment: {experiment_id} with val_fold_idx {val_fold_idx}, k_shots {k_shots} for dataset {dataset} and backbone {backbone}")
+            print(
+                f"Downloading checkpoint for experiment: {experiment_id} with val_fold_idx {val_fold_idx}, k_shots {k_shots} for dataset {dataset} and backbone {backbone}"
+            )
             if not os.path.exists("checkpoints/fptrans"):
                 os.makedirs("checkpoints/fptrans")
             gdown.download(
                 id=fp_trans_experiment_links[experiment_id - 1],
                 output=model_checkpoint,
-                quiet=False
+                quiet=False,
             )
 
     opt = dotdict(opt)
@@ -160,6 +172,18 @@ def build_fptrans(
 
 
 class FPTransMultiClass(FPTrans):
+    def _preprocess_masks(self, masks, H, W):
+        masks = F.interpolate(masks, size=(masks.shape[2], H, W), mode="nearest")  # B, M, C, H, W
+
+        B, N, C, _, _ = masks.size()
+        # remove bg from masks
+        masks = masks[:, :, 1:, ::]
+
+        # Repeat dims along class dimension
+        masks = rearrange(masks, "b n c h w -> (b n c) h w")
+
+        return rearrange(masks, "(b n c) h w -> b n c h w", b=B, n=N)
+
     def postprocess_masks(self, logits, dims):
         max_dims = torch.max(dims.view(-1, 2), 0).values.tolist()
         dims = dims[:, 0, :]  # get real sizes of the query images
@@ -190,20 +214,24 @@ class FPTransMultiClass(FPTrans):
             ]
         )
         return logits
-    
+
     def forward(self, x):
         B, M, Ch, H, W = x[BatchKeys.IMAGES].size()
-        C = x[BatchKeys.PROMPT_MASKS].size(2)
         S = M - 1
 
-        q = x[BatchKeys.IMAGES][:, 0]
+        q = x[BatchKeys.IMAGES][:, :1]
         s_x = x[BatchKeys.IMAGES][:, 1:]
-        s_y = F.interpolate(x[BatchKeys.PROMPT_MASKS], size=(C, H, W), mode="nearest") # B, M, C, H, W
+
+        s_y = self._preprocess_masks(x[BatchKeys.PROMPT_MASKS], H, W)  # B, S, C, H, W
+        C = s_y.size(2)
 
         logits = []
 
-        for c in range(1, C):
-            logits.append(super().forward(q, s_x, s_y[:, :, c, :, :], None, None))
+        for c in range(C):
+            class_examples = x[BatchKeys.FLAG_EXAMPLES][:, :, c + 1]
+            class_s_x = s_x[class_examples].unsqueeze(0)
+            class_s_y = s_y[:, :, c, ::][class_examples].unsqueeze(0)
+            logits.append(super().forward(q, class_s_x, class_s_y, None, None))
 
         logits = torch.stack([l["out"] for l in logits], dim=1)
         fg_logits = logits[:, :, 1, ::]
@@ -214,4 +242,3 @@ class FPTransMultiClass(FPTrans):
 
         logits = self.postprocess_masks(logits, x["dims"])
         return {ResultDict.LOGITS: logits}
- 
