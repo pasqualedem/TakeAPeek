@@ -1,0 +1,16 @@
+
+parameters:
+  dataset: [pascal]
+  num_iterations: [8]
+  device: [cuda]
+  lr: [0.005]
+  val_num_samples: [5000]
+  val_fold_idx: [0, 1, 2, 3]
+  model: [fptrans_ada]
+  n_ways: [1]
+  k_shots: [5]
+  peft_type: ["full"]
+  subsample: [null]
+  target_modules: [["adapter_block"]]
+
+other_grids:

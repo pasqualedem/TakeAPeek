@@ -16,6 +16,7 @@ from .fptrans import build_fptrans
 from .dmtnet import build_dmtnet
 
 from .dcama_ada import build_dcama_ada
+from .fptrans_ada import build_fptrans_ada
 
 
 ComposedOutput = namedtuple("ComposedOutput", ["main", "aux"])
@@ -38,7 +39,8 @@ model_registry = {
     
     # adaptivefss
     "dcama_ada": build_dcama_ada,
-    
+    "fptrans_ada": build_fptrans_ada,
+
     # Encoders only
     **ENCODERS
 }

@@ -274,6 +274,27 @@ def get_dcama_ada(dataset, val_fold_idx, n_ways, **kwargs):
     return model_registry[name](**params), image_size
 
 
+def get_fptrans_ada(dataset, val_fold_idx, n_ways, k_shots, **kwargs):
+    name = "fptrans_ada"
+    adapter_params = dict(
+        adapter_weight=0.1,
+        hidden_ratio=32,
+        drop_ratio=0.4,
+        momentum=0.99
+    )
+    
+    params = dict(
+        val_fold_idx=val_fold_idx,
+        k_shots=k_shots,
+        dataset=dataset,
+        backbone="ViT-B/16",
+        adapter_params=adapter_params,
+    )
+    image_size = 480
+    return model_registry[name](**params), image_size
+
+
+
 def get_model(model_name, **kwargs):
     supported_models = {
         "label_anything": get_la,
@@ -283,6 +304,7 @@ def get_model(model_name, **kwargs):
         "dmtnet": get_dmtnet,
         "fptrans": get_fptrans,
         "dcama_ada": get_dcama_ada,
+        "fptrans_ada": get_fptrans_ada,
     }
     return supported_models[model_name](**kwargs)
 
