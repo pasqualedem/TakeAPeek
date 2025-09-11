@@ -18,8 +18,8 @@ def sync_folder(path):
             if len(sync_lines) == 0:
                 print(f'No sync command found in {f}')
                 continue
-            sync_line = sync_lines[0]
-            print(sync_line[len(PREFIX):])
+            for sync_line in sync_lines:
+                print(sync_line[len(PREFIX):])
 
 
 if __name__ == "__main__":

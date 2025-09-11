@@ -1,10 +1,10 @@
 experiment:
-  group: OneShot
+  group: TwoShot
 parameters:
   dataset: [coco]
   num_iterations: [20]
   device: [cuda]
-  lora_r: [32, 64, 128]
+  lora_r: [64]
   lr: [0.001]
   target_modules: ["qkv,"]
   lora_dropout: [0.1]
@@ -12,6 +12,6 @@ parameters:
   val_fold_idx: [0, 1, 2, 3]
   model: [dcama]
   n_ways: [1]
-  k_shots: [1]
+  k_shots: [2]
 
 other_grids:

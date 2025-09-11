@@ -5,7 +5,7 @@ parameters:
   computation_test: [True]
 
   dataset: [coco]
-  device: [cuda:1]
+  device: [cuda]
   lr: [0.001]
   val_fold_idx: [0]
   model: [fptrans_ada]

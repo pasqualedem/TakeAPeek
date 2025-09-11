@@ -5,7 +5,8 @@ parameters:
   computation_test: [True]
 
   dataset: [coco]
-  device: [cuda:1]
+  device: [cuda]
+  peft_type: [lora]
   lora_r: [64]
   lr: [0.001]
   target_modules: ["qkv,"]
