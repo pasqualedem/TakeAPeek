@@ -71,6 +71,9 @@ class FPTrans(nn.Module):
         self.bg_sampler = np.random.RandomState(1289)
 
         logger.info(' ' * 5 + f"==> Model {self.__class__.__name__} created")
+        
+    def decoder_params(self):
+        return self.purifier.named_parameters()
 
     def build_upsampler(self, embed_dim):
         return Residual(nn.Sequential(

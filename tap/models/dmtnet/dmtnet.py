@@ -79,6 +79,12 @@ class DMTNetwork(nn.Module):
         self.hpn_learner = HPNLearner(list(reversed(nbottlenecks[-3:])))
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         self.dropout = nn.Dropout(p=0.2)
+        
+    def decoder_params(self):
+        modules = [self.hpn_learner, self.reference_layer1, self.reference_layer2, self.reference_layer3, self.reference_layer4, self.reference_layer5, self.reference_layer6]
+        for m in modules:
+            for p in m.named_parameters():
+                yield p
 
     def predict_mask_1shot(self, query_img, support_img, support_mask):
         query_feats = self.extract_feats(query_img, self.backbone, self.feat_ids, self.bottleneck_ids, self.lids)

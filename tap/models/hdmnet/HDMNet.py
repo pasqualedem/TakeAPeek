@@ -168,7 +168,13 @@ class OneModel(nn.Module):
                     nn.ReLU(inplace=True),
                     nn.Conv2d(self.kshot_trans_dim, self.shot, kernel_size=1))
         
-
+    def decoder_params(self):
+        modules = [self.down_query, self.down_supp, self.query_merge, self.supp_merge, self.transformer, self.gram_merge, self.cls_merge]
+        if self.shot > 1:
+            modules.append(self.kshot_rw)
+        for m in modules:
+            for p in m.named_parameters():
+                yield p
 
     def forward(self, x, y_m=None, y_b=None, s_x=None, s_y=None, cat_idx=None):
         h, w = x.shape[-2:]

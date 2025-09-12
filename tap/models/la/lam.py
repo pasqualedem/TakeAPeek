@@ -53,6 +53,12 @@ class Lam(nn.Module):
         self.class_embeddings = None
         self.neck = neck
         self.custom_preprocess = custom_preprocess
+        
+    def decoder_params(self):
+        modules = [self.prompt_encoder, self.mask_decoder]
+        for m in modules:
+            for p in m.named_parameters():
+                yield p
 
     def forward(
         self, batched_input: List[Dict[str, Any]]

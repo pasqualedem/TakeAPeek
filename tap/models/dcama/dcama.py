@@ -49,6 +49,9 @@ class DCAMA(nn.Module):
         self.model = DCAMA_model(in_channels=self.feat_channels, stack_ids=self.stack_ids)
 
         self.cross_entropy_loss = nn.CrossEntropyLoss()
+        
+    def decoder_params(self):
+        return self.model.named_parameters()
 
     def forward_1shot(self, query_img, support_img, support_mask):
         query_feats = self.extract_feats(query_img)
