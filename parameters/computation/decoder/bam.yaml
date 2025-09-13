@@ -1,0 +1,19 @@
+experiment:
+  group: Computation
+
+parameters:
+  computation_test: [True]
+
+  dataset: [coco]
+  device: [cuda]
+  peft_type: [full]
+  target_modules: ["decoder"]
+  lr: [0.001]
+  val_fold_idx: [0]
+  model: [bam]
+  n_ways: [1]
+  k_shots: [1, 5]
+  lora: [False]
+
+other_grids:
+
