@@ -70,10 +70,8 @@ def get_peft_model(model, config):
         target_modules_names = []
         
         if target_modules == "decoder":
-            print("Fine-tuning decoder only")
             parameters = model.decoder_params()
         else:
-            print(f"Fine-tuning {target_modules} only")
             parameters = model.named_parameters()
 
         for name, param in parameters:
