@@ -71,7 +71,10 @@ def get_peft_model(model, config):
         
         if target_modules == "decoder":
             target_modules = [m[0] for m in model.decoder_params()]
-        
+
+        if target_modules == "encoder":
+            target_modules = [m[0] for m in model.encoder_params()]
+
         for name, param in model.named_parameters():
             if any(target_module in name for target_module in target_modules):
                 target_modules_names.append(name)

@@ -73,7 +73,18 @@ class FPTrans(nn.Module):
         logger.info(' ' * 5 + f"==> Model {self.__class__.__name__} created")
         
     def decoder_params(self):
-        return self.purifier.named_parameters()
+        modules = [self.purifier]
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
+    
+    def encoder_params(self):
+        modules = [self.encoder]
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
 
     def build_upsampler(self, embed_dim):
         return Residual(nn.Sequential(

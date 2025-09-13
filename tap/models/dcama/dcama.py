@@ -51,8 +51,19 @@ class DCAMA(nn.Module):
         self.cross_entropy_loss = nn.CrossEntropyLoss()
         
     def decoder_params(self):
-        return self.model.named_parameters()
-
+        modules = [self.model]
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
+    
+    def encoder_params(self):
+        modules = [self.feature_extractor]
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
+                    
     def forward_1shot(self, query_img, support_img, support_mask):
         query_feats = self.extract_feats(query_img)
         support_feats = self.extract_feats(support_img)

@@ -82,9 +82,17 @@ class DMTNetwork(nn.Module):
         
     def decoder_params(self):
         modules = [self.hpn_learner, self.reference_layer1, self.reference_layer2, self.reference_layer3, self.reference_layer4, self.reference_layer5, self.reference_layer6]
-        for m in modules:
-            for p in m.named_parameters():
-                yield p
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
+                
+    def encoder_params(self):
+        modules = [self.backbone]
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
 
     def predict_mask_1shot(self, query_img, support_img, support_mask):
         query_feats = self.extract_feats(query_img, self.backbone, self.feat_ids, self.bottleneck_ids, self.lids)

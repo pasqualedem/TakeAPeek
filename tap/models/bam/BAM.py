@@ -178,9 +178,17 @@ class OneModel(nn.Module):
         modules = [self.down_query, self.down_supp, self.init_merge, self.ASPP_meta, self.res1_meta, self.res2_meta, self.cls_meta, self.gram_merge, self.cls_merge]
         if self.shot > 1:
             modules.append(self.kshot_rw)
-        for m in modules:
-            for p in m.named_parameters():
-                yield p
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
+                
+    def encoder_params(self):
+        modules = [self.layer0, self.layer1, self.layer2, self.layer3, self.layer4]
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
 
     # que_img, sup_img, sup_mask, que_mask(meta), que_mask(base), cat_idx(meta)
     def forward(self, x, s_x, s_y, y_m, y_b, cat_idx=None, return_query_feats=False, return_support_feats=False):

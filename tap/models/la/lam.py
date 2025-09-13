@@ -56,9 +56,19 @@ class Lam(nn.Module):
         
     def decoder_params(self):
         modules = [self.prompt_encoder, self.mask_decoder]
-        for m in modules:
-            for p in m.named_parameters():
-                yield p
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
+                
+    def encoder_params(self):
+        modules = [self.image_encoder]
+        if self.neck is not None:
+            modules.append(self.neck)
+        for c_name, children in self.named_children():
+            if children in modules:
+                for p_name, param in children.named_parameters():
+                    yield (f"{c_name}.{p_name}", param)
 
     def forward(
         self, batched_input: List[Dict[str, Any]]
