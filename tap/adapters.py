@@ -70,11 +70,9 @@ def get_peft_model(model, config):
         target_modules_names = []
         
         if target_modules == "decoder":
-            parameters = model.decoder_params()
-        else:
-            parameters = model.named_parameters()
-
-        for name, param in parameters:
+            target_modules = [m[0] for m in model.decoder_params()]
+        
+        for name, param in model.named_parameters():
             if any(target_module in name for target_module in target_modules):
                 target_modules_names.append(name)
                 param.requires_grad = True
