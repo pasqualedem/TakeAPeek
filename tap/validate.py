@@ -386,10 +386,8 @@ class LoraEvaluator:
                 self.optimizer.zero_grad()
                 if i == 0:
                     with torch.no_grad():
-                        self.lora_model.eval()
                         res = self.lora_model(batch)
                         loss_value = self.loss(res, gt)
-                        self.lora_model.train()
                 else:
                     res = self.lora_model(batch)
                     loss_value = self.loss(res, gt)
