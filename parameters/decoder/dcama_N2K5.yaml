@@ -1,7 +1,7 @@
 experiment:
   group: Decoder
 parameters:
-  dataset: [coco]
+  dataset: [pascal]
   num_iterations: [8]
   device: [cuda]
   peft_type: [full]

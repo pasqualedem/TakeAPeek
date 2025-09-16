@@ -31,13 +31,32 @@ python main.py --experiment_file=parameters/coco/fptrans_ada_N1K5.yaml
 python main.py --experiment_file=parameters/coco/fptrans_ada_N2K5.yaml
 python main.py --experiment_file=parameters/pascal/fptrans_ada_N1K5.yaml
 python main.py --experiment_file=parameters/pascal/fptrans_ada_N2K5.yaml
-# Computational
 
-python main.py --experiment_file=parameters/computation/hdmnet.yaml --sequential
-python main.py --experiment_file=parameters/computation/bam.yaml --sequential
-python main.py --experiment_file=parameters/computation/la.yaml --sequential
-python main.py --experiment_file=parameters/computation/dcama.yaml --sequential
-python main.py --experiment_file=parameters/computation/fptrans.yaml --sequential
-#
-python main.py --experiment_file=parameters/computation/dcama_ada.yaml --sequential
-python main.py --experiment_file=parameters/computation/fptrans_ada.yaml --sequential
+# Decoder
+python main.py --experiment_file=parameters/decoder/dcama_N1K5.yaml
+python main.py --experiment_file=parameters/decoder/dcama_N2K5.yaml
+
+python main.py --experiment_file=parameters/decoder/fptrans_N1K5.yaml
+python main.py --experiment_file=parameters/decoder/fptrans_N2K5.yaml
+
+python main.py --experiment_file=parameters/decoder/bam_N1K5.yaml
+python main.py --experiment_file=parameters/decoder/bam_N2K5.yaml
+python main.py --experiment_file=parameters/decoder/hdmnet_N1K5.yaml
+python main.py --experiment_file=parameters/decoder/hdmnet_N2K5.yaml
+python main.py --experiment_file=parameters/decoder/la_N1K5.yaml
+python main.py --experiment_file=parameters/decoder/la_N2K5.yaml
+
+# Computational
+python main.py --experiment_file=parameters/computation/hdmnet.yaml
+python main.py --experiment_file=parameters/computation/bam.yaml
+python main.py --experiment_file=parameters/computation/la.yaml
+python main.py --experiment_file=parameters/computation/dcama.yaml
+python main.py --experiment_file=parameters/computation/fptrans.yaml
+python main.py --experiment_file=parameters/computation/dcama_ada.yaml
+python main.py --experiment_file=parameters/computation/fptrans_ada.yaml
+
+python main.py --experiment_file=parameters/computation/decoder/hdmnet.yaml
+python main.py --experiment_file=parameters/computation/decoder/bam.yaml
+python main.py --experiment_file=parameters/computation/decoder/la.yaml
+python main.py --experiment_file=parameters/computation/decoder/dcama.yaml
+python main.py --experiment_file=parameters/computation/decoder/fptrans.yaml

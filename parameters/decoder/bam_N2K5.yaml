@@ -1,16 +1,16 @@
 experiment:
   group: Decoder
 parameters:
-  dataset: [pascal]
+  dataset: [coco, pascal]
   num_iterations: [8]
   device: [cuda]
   peft_type: [full]
   lr: [0.00001]
   target_modules: ["decoder"]
-  val_num_samples: [5000]
+  val_num_samples: [1000]
   val_fold_idx: [0, 1, 2, 3]
-  model: [dcama]
-  n_ways: [1]
+  model: [bam]
+  n_ways: [2]
   k_shots: [5]
 
 other_grids:
