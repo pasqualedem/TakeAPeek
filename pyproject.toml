@@ -5,6 +5,7 @@ description = "Take a Peek"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "albumentations>=2.0.8",
     "click>=8.1.8",
     "dropblock>=0.3.0",
     "easydict>=1.13",

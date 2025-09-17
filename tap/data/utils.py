@@ -50,6 +50,7 @@ class BatchKeys(StrEnum):
     PROMPT_BBOXES = "prompt_bboxes"
     FLAG_BBOXES = "flag_bboxes"
     FLAG_EXAMPLES = "flag_examples"
+    FLAG_GTS = "flag_gts"
     DIMS = "dims"
     CLASSES = "classes"
     IMAGE_IDS = "image_ids"

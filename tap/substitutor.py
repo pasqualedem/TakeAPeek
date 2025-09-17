@@ -1,4 +1,5 @@
 import numpy as np
+import albumentations as A
 import torch
 
 from einops import rearrange
@@ -92,6 +93,87 @@ def generate_incremental_tensors(N, K):
 
     return result_tensors
 
+def augment_support_set(batch, ground_truths, k_augmented=5):
+    """
+    Augment the support set until the number of support images is k_augmented times.
+    """
+    current_support_set_len = batch[BatchKeys.IMAGES].shape[1]
+    if current_support_set_len >= k_augmented:
+        return batch
+    augment_times = k_augmented - current_support_set_len
+    
+    augmentations = A.Compose([
+        A.HorizontalFlip(p=0.8),
+        A.ShiftScaleRotate(shift_limit=0.0625, scale_limit=0.1, rotate_limit=45, p=0.8),
+        A.RandomBrightnessContrast(p=0.8),
+    ])
+    
+    for i in range(augment_times):
+        imgs = batch[BatchKeys.IMAGES][:, i % current_support_set_len].cpu().numpy()
+        masks = batch[BatchKeys.PROMPT_MASKS][:, i % current_support_set_len]
+        gts = ground_truths[:, i % current_support_set_len]
+        
+        B = imgs.shape[0]
+        
+        imgs_augmented = []
+        masks_augmented = []
+        gt_augmented = []
+        
+        for b in range(B):
+            img = imgs[b]
+            mask = masks[b]
+            ground_truth = gts[b]
+            mask_hw = mask.shape[1:]
+            gt_hw = ground_truth.shape[-2:]
+            mask = torch.nn.functional.interpolate(mask.unsqueeze(0), size=img.shape[1:], mode='nearest').squeeze().cpu().numpy()
+            ground_truth = torch.nn.functional.interpolate(ground_truth.unsqueeze(0).unsqueeze(0).float(), size=img.shape[1:], mode='nearest').squeeze().cpu().numpy()
+            
+            img = np.transpose(img, (1, 2, 0))  # Convert to HWC
+            mask = np.transpose(mask, (1, 2, 0))  # Convert to HWC
+            # ground_truth = np.transpose(ground_truth, (1, 2, 0)) h # Convert to HWC
+            augmented = augmentations(image=img, mask=mask, mask0=ground_truth)
+            aug_img = augmented['image']
+            aug_img_tensor = torch.tensor(np.transpose(aug_img, (2, 0, 1))).unsqueeze(0).to(batch[BatchKeys.IMAGES].device)
+            # Mask
+            aug_mask = augmented['mask']
+            aug_mask = np.transpose(aug_mask, (2, 0, 1))  # Convert back to CHW
+            aug_mask = torch.nn.functional.interpolate(torch.tensor(aug_mask).unsqueeze(0), size=mask_hw, mode='nearest')
+            aug_mask = aug_mask.to(batch[BatchKeys.PROMPT_MASKS].device)
+            # GT
+            aug_gt = augmented['mask0']
+            # aug_gt = np.transpose(aug_gt, (2, 0, 1))  # Convert back to CHW
+            aug_gt = torch.nn.functional.interpolate(torch.tensor(aug_gt).unsqueeze(0).unsqueeze(0), size=gt_hw, mode='nearest')
+            aug_gt = aug_gt.to(ground_truths.device)
+            gt_augmented.append(aug_gt)
+            
+            imgs_augmented.append(aug_img_tensor)
+            masks_augmented.append(aug_mask)
+
+        imgs_augmented = torch.cat(imgs_augmented, dim=0)
+        masks_augmented = torch.cat(masks_augmented, dim=0)
+        gt_augmented = torch.cat(gt_augmented, dim=0).long()
+        
+        ground_truths = torch.cat([ground_truths, gt_augmented], dim=1)
+
+        batch[BatchKeys.IMAGES] = torch.cat([batch[BatchKeys.IMAGES], imgs_augmented.unsqueeze(1)], dim=1)
+        batch[BatchKeys.PROMPT_MASKS] = torch.cat([batch[BatchKeys.PROMPT_MASKS], masks_augmented.unsqueeze(1)], dim=1)
+
+        for key in [BatchKeys.FLAG_MASKS, BatchKeys.FLAG_EXAMPLES, BatchKeys.FLAG_GTS]:
+            if key in batch:
+                mask = batch[key][:, i % current_support_set_len].unsqueeze(1)
+                batch[key] = torch.cat([batch[key], mask], dim=1)
+        
+        if BatchKeys.DIMS in batch:
+            dims = batch[BatchKeys.DIMS][:, i % current_support_set_len].unsqueeze(1)
+            batch[BatchKeys.DIMS] = torch.cat([batch[BatchKeys.DIMS], dims], dim=1)
+        
+        for key in [BatchKeys.CLASSES, BatchKeys.IMAGE_IDS]:
+            if key in batch:
+                elem = [batch[key][k][i % current_support_set_len] for k in range(B)]
+                batch[key] = [batch[key][k] + [elem[k]] for k in range(B)]
+                
+    return batch, ground_truths
+
 
 class Substitutor:
     """
@@ -120,6 +202,8 @@ class Substitutor:
         long_side_length=1024,
         custom_preprocess=True,
         subsample=None,
+        augment=False,
+        k_augmented=5,
         **kwargs,
     ) -> None:
         if kwargs:
@@ -132,6 +216,8 @@ class Substitutor:
         self.prompt_processor = PromptsProcessor(
             long_side_length=long_side_length, custom_preprocess=custom_preprocess
         )
+        self.augment = augment
+        self.k_augmented = k_augmented
 
     def reset(self, batch: dict) -> None:
         self.it = 0
@@ -139,6 +225,9 @@ class Substitutor:
         self.batch, self.ground_truths = batch
         self.batch, self.query_image_gt_dim = self.first_divide_query_examples()
         self.example_classes = self.batch[BatchKeys.CLASSES]
+        if self.augment:
+            raise NotImplementedError("Augmentation is not implemented yet.")
+            self.batch, self.ground_truths = augment_support_set(self.batch, self.ground_truths, self.k_augmented)
 
     def __iter__(self):
         return self
