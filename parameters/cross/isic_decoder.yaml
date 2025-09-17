@@ -1,0 +1,16 @@
+experiment:
+  group: ISIC
+parameters:
+  num_iterations: [8]
+  device: [cuda]
+  lr: [0.00001]
+  target_modules: ["decoder"]
+  peft_type: [full]
+  val_num_samples: [1200]
+  model: [dmtnet]
+  n_ways: [1]
+  k_shots: [3, 5, 10, 15]
+  subsample: [1]
+  dataset: [isic]
+
+other_grids:
