@@ -39,6 +39,7 @@ def get_dataloaders(dataset_args, dataloader_args, num_processes):
 
     datasets_params = dataset_args.get("datasets")
     common_params = dataset_args.get("common")
+    mask_perturbation = dataset_args.get("mask_perturbation", 0.0)
     possible_batch_example_nums = dataloader_args.pop("possible_batch_example_nums")
     val_possible_batch_example_nums = dataloader_args.pop(
         "val_possible_batch_example_nums", possible_batch_example_nums
@@ -63,6 +64,7 @@ def get_dataloaders(dataset_args, dataloader_args, num_processes):
         val_dataset = FSSDataset(
             datasets_params={dataset_name: params},
             common_params={**common_params, "preprocess": preprocess},
+            mask_perturbation=mask_perturbation,
         )
         val_batch_sampler = VariableBatchSampler(
             val_dataset,

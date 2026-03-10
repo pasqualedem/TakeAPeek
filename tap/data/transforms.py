@@ -10,6 +10,7 @@ from typing import Tuple
 from tap.data.utils import get_preprocess_shape
 from torchvision.transforms import Normalize as Norm
 from torchvision.transforms import Resize
+from skimage.segmentation import slic
 
 class CustomResize(object):
     def __init__(self, long_side_length: int = 1024):
@@ -222,3 +223,70 @@ class PromptsProcessor:
             interpolation=Image.NEAREST,
         )
         return mask
+
+
+class SuperpixelMaskPerturbator:
+    def __init__(self, perturbation_ratio: float = 0.1, n_segments: int = 100, compactness: float = 10.0):
+        """
+        Args:
+            perturbation_ratio (float): Percentage of foreground superpixels to remove per class.
+            n_segments (int): Approximate number of superpixels to divide the image into.
+            compactness (float): Balances color proximity versus space for SLIC.
+        """
+        self.perturbation_ratio = perturbation_ratio
+        self.n_segments = n_segments
+        self.compactness = compactness
+
+    def perturb(self, batch: dict) -> dict:
+        # Clone the mask to avoid modifying the original tensor in place
+        perturbed_mask = batch["prompt_masks"].clone()
+        ground_truth_mask = batch["ground_truths"]
+        images = batch["images"]  
+        
+        M, C_mask, H, W = perturbed_mask.shape
+
+        for m in range(M):
+            # Extract the specific image [3, H, W]
+            img_tensor = images[m]
+
+            # 1. Prepare image for SLIC (from Tensor [3, H, W] to Numpy [H, W, 3])
+            img_np = img_tensor.cpu().numpy().transpose(1, 2, 0)
+
+            # 2. Generate superpixels (computed once per image, reused for all classes)
+            segments = slic(img_np, n_segments=self.n_segments, compactness=self.compactness, start_label=1)
+            segments_tensor = torch.from_numpy(segments).to(perturbed_mask.device)
+
+            # 3. Iterate over each class channel independently
+            for c in range(C_mask):
+                current_mask = perturbed_mask[m, c] 
+                foreground_mask = current_mask == 1
+                
+                # Identify which superpixels overlap with the foreground of this specific class
+                foreground_segments = segments_tensor[foreground_mask]
+                
+                if foreground_segments.numel() == 0:
+                    continue # Skip if there is no foreground for this class
+
+                unique_fg_segments = torch.unique(foreground_segments)
+
+                # 4. Calculate the number of regions to remove for this class
+                num_regions_to_perturb = int(len(unique_fg_segments) * self.perturbation_ratio)
+
+                if num_regions_to_perturb > 0:
+                    # 5. Randomly select and remove regions
+                    perm = torch.randperm(len(unique_fg_segments))
+                    selected_regions = unique_fg_segments[perm[:num_regions_to_perturb]]
+
+                    # 6. Apply perturbation (flip 1 to 0) for the selected superpixels
+                    mask_to_remove = torch.isin(segments_tensor, selected_regions)
+                    perturbed_mask[m, c][mask_to_remove] = 0
+                    if m > 0: # Only apply perturbation to support set ground truth masks, not query set
+                        ground_truth_mask[m][mask_to_remove] = 0
+
+        # Update the batch dictionary
+        batch["prompt_masks"] = perturbed_mask
+        batch["ground_truths"] = ground_truth_mask
+        return batch
+    
+    def __call__(self, batch: dict) -> dict:
+        return self.perturb(batch)

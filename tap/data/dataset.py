@@ -14,6 +14,7 @@ from tap.data.coco20i import Coco20iDataset
 from tap.data.pascal import PascalDataset
 from tap.data.pascal5i import Pascal5iDataset
 from tap.logger.text_logger import get_logger
+from tap.data.transforms import SuperpixelMaskPerturbator
 
 logger = get_logger(__name__)
 
@@ -35,13 +36,17 @@ datasets = {
 
 
 class FSSDataset(Dataset):
-    def __init__(self, datasets_params: Dict, common_params: Dict) -> None:
+    def __init__(self, datasets_params: Dict, common_params: Dict, mask_perturbation: dict = {}) -> None:
         """
         Initializes a LabelAnythingDataset Dataset object.
 
         Args:
             datasets_params (Dict): A dictionary containing the parameters for each dataset.
             common_params (Dict): A dictionary containing the common parameters for all datasets.
+            mask_perturbation (float): A dictionary containing the parameters for mask perturbation. It should contain the following entries:
+                - 'perturbation_ratio': A float representing the ratio of the mask to perturb.
+                - 'n_segments': An integer representing the number of superpixels to generate for perturbation.
+                - 'compactness': A float representing the compactness parameter for superpixel generation.
         """
 
         self.datasets = {
@@ -60,6 +65,8 @@ class FSSDataset(Dataset):
             [],
         )
         self.index = {i: index for i, index in enumerate(index)}
+        
+        self.mask_perturbator = SuperpixelMaskPerturbator(**mask_perturbation) if mask_perturbation else None
 
         super().__init__()
 
@@ -78,10 +85,10 @@ class FSSDataset(Dataset):
         """
         idx, batch_metadata = idx_metadata
         dataset_name, dataset_index = self.index[idx]
-        return (
-            self.datasets[dataset_name][(dataset_index, batch_metadata)],
-            dataset_name,
-        )
+        batch = self.datasets[dataset_name][(dataset_index, batch_metadata)]
+        if self.mask_perturbator is not None:
+            batch = self.mask_perturbator(batch)
+        return batch, dataset_name
 
     def load_and_preprocess_images(self, dataset_name, image_ids):
         return self.datasets[dataset_name].load_and_preprocess_images(image_ids)
