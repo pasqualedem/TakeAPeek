@@ -333,6 +333,7 @@ class LoraEvaluator:
         print_every=50,
         device="cuda",
         tracker=None,
+        batch_size=1,
     ):
         self.accelerator = accelerator
         self.num_iterations = num_iterations
@@ -352,15 +353,17 @@ class LoraEvaluator:
 
         self.substitutor = substitutor
         self.model = model
-        self.lora_model = get_peft_model(deepcopy(model), lora_config)
+        self.batch_size = batch_size
+        
+        temp_lora_model = get_peft_model(deepcopy(self.model), self.lora_config)
         # Check target modules
-        print(f"Target modules: {self.lora_model.targeted_module_names}")
+        print(f"Target modules: {temp_lora_model.targeted_module_names}")
 
-        self.trainable_params = print_trainable_parameters(self.lora_model)
+        self.trainable_params = print_trainable_parameters(temp_lora_model)
         self.loss = FSSLoss(
             **{"class_weighting": True, "components": {"focal": {"weight": 1.0}}}
         )
-        self.optimizer = AdamW(self.lora_model.parameters(), lr=lr)
+        self.optimizer = AdamW(temp_lora_model.parameters(), lr=lr)
         self.mious = [
             DistributedMulticlassJaccardIndex(
                 num_classes=len(self.dataset_categories) + 1,
@@ -371,11 +374,13 @@ class LoraEvaluator:
         ]
 
     def reset_lora(self):
-        self.lora_model = get_peft_model(deepcopy(self.model), self.lora_config)
-        self.optimizer = AdamW(self.lora_model.parameters(), lr=self.lr)
-        self.lora_model.to(self.device)
+        lora_model = get_peft_model(deepcopy(self.model), self.lora_config)
+        optimizer = AdamW(lora_model.parameters(), lr=self.lr)
+        lora_model = lora_model.to(self.device)
+        
+        return lora_model, optimizer
 
-    def lora_step(self, batch_tuple, gt, bar):
+    def lora_step(self, lora_model, optimizer, batch_tuple, gt, bar):
         segmentation_preds = []
         for k in range(self.num_iterations):
             bar.set_description(
@@ -383,16 +388,16 @@ class LoraEvaluator:
             )
             self.substitutor.reset(batch=batch_tuple)
             for i, (batch, gt) in enumerate(self.substitutor):
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
                 if i == 0:
                     with torch.no_grad():
-                        res = self.lora_model(batch)
+                        res = lora_model(batch)
                         loss_value = self.loss(res, gt)
                 else:
-                    res = self.lora_model(batch)
+                    res = lora_model(batch)
                     loss_value = self.loss(res, gt)
                     loss_value.backward()
-                    self.optimizer.step()
+                    optimizer.step()
                 preds = res["logits"].argmax(dim=1)
                 glob_preds, glob_gt = to_global_multiclass(
                     batch["classes"], self.dataset_categories, preds, gt
@@ -455,24 +460,52 @@ class LoraEvaluator:
         plt.savefig(f"{self.print_folder}/mious.png")
         with open(f"{self.print_folder}/mious.txt", "w") as f:
             f.write("\n".join([str(m) for m in miou_values]))
-
-    def evaluate(self):        
-        bar = tqdm(enumerate(self.dataloader), total=len(self.dataloader))
-        for i, (batch_tuple, data_name) in bar:
-            self.reset_lora()
-            batch_gt = batch_tuple[1].to(self.device)
-            batch_dict = {
-                k: v.to(self.device) if isinstance(v, torch.Tensor) else v
-                for k, v in batch_tuple[0].items()
+            
+    def split_batch(self, batch_tuple, num_splits):
+        micro_batches = []
+        batch, gt = batch_tuple
+        for i in range(num_splits):
+            micro_batch = {
+                k: v[i : i + 1] if v is not None else None for k, v in batch.items()
             }
-            batch_tuple = (batch_dict, batch_gt)
-            segmentation_preds = self.lora_step(batch_tuple, batch_gt, bar)
-            if i % self.print_every == 0:
-                self.print_results(i, batch_tuple, segmentation_preds)
+            micro_batch_tuple = (micro_batch, gt[i : i + 1])
+            micro_batches.append(micro_batch_tuple)
+        return micro_batches
+
+    def evaluate(self):
+        
+        streams = [torch.cuda.Stream() for _ in range(self.batch_size)]
+        
+        bar = tqdm(enumerate(self.dataloader), total=len(self.dataloader))
+        
+        for i, (batch_tuple, data_name) in bar:
+            micro_batches = self.split_batch(batch_tuple, self.batch_size)
+            preds = [None] * len(micro_batches)
+            
+            for j, micro_batch in enumerate(micro_batches):
+                with torch.cuda.stream(streams[j]):
+                    lora_model, optimizer = self.reset_lora() 
+                    
+                    preds[j] = self.lora_step(
+                        lora_model=lora_model,
+                        optimizer=optimizer,
+                        batch_tuple=micro_batch,
+                        gt=micro_batch[1],
+                        bar=bar
+                    )
+
+            torch.cuda.synchronize()
+    
+            for j in range(len(micro_batches)):
+                
+                if (i * self.batch_size + j) % self.print_every == 0:
+                    self.print_results(i * self.batch_size + j, micro_batches[j], preds[j])
+                    
             bar.set_postfix(
                 miou0=self.mious[0].compute().item(),
                 miouN=self.mious[-1].compute().item(),
             )
+            
         self.print_mious()
 
 def main(params):
@@ -504,6 +537,8 @@ def main(params):
     model_name = params.get("model", "tap")
     val_fold_idx = params.get("val_fold_idx", 3)
     dataset = params.get("dataset", "coco")
+    mask_perturbation = params.get("mask_perturbation", 0.0)
+    batch_size = params.get("batch_size", 1)
 
     # Initialize Accelerator
     accelerator = Accelerator()
@@ -520,7 +555,9 @@ def main(params):
     dataset_args["datasets"][dataset_name]["n_shots"] = k_shots
     dataset_args["datasets"][dataset_name]["val_num_samples"] = val_num_samples
     dataset_args["datasets"][dataset_name]["val_fold_idx"] = val_fold_idx
+    dataset_args["mask_perturbation"] = mask_perturbation
     dataset_args["common"]["image_size"] = image_size
+    dataloader_args["val_possible_batch_example_nums"] = [[batch_size, 1]]
 
     val_dict = get_dataloaders(
         dataset_args, dataloader_args, num_processes=1
@@ -584,6 +621,7 @@ def main(params):
         device=device,
         tracker=tracker,
         substitutor=substitutor,
+        batch_size=batch_size,
     )
     tracker.log({"trainable_params": lora_evaluator.trainable_params})
 
