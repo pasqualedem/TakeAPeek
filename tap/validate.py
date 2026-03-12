@@ -473,6 +473,18 @@ class LoraEvaluator:
             "per_sample/mean_delta":         deltas.mean(),
             "per_sample/std_delta":          deltas.std(),
         }
+        
+        # At least one positive step rate: percentage of samples that had at least one positive step across iterations
+        at_least_one_positive = (iter_deltas > 0).any(axis=0)  # (num_samples,)
+        self.tracker.log({
+            "per_sample/at_least_one_positive_rate": at_least_one_positive.mean()
+        })
+        
+        # Never positive rate: percentage of samples that had no positive steps across iterations
+        never_positive = (~at_least_one_positive).mean()
+        self.tracker.log({
+            "per_sample/never_positive_rate": never_positive
+        })
 
         # ── Iteration trend ───────────────────────────────────────────
         # Shape: (num_iterations-1, num_samples)
@@ -487,6 +499,7 @@ class LoraEvaluator:
         iter_trend_metrics = {
             "iter_trend/mean_positive_steps":    positive_steps.mean(),
             "iter_trend/mean_negative_steps":    negative_steps.mean(),
+            "iter_trend/std_positive_steps":     positive_steps.std(),
             "iter_trend/positive_step_rate":     (iter_deltas > 0).mean(),
             "iter_trend/monotone_increasing":    (positive_steps == self.num_iterations - 1).mean(),
             "iter_trend/monotone_decreasing":    (negative_steps == self.num_iterations - 1).mean(),
