@@ -473,6 +473,16 @@ class LoraEvaluator:
             "per_sample/mean_delta":         deltas.mean(),
             "per_sample/std_delta":          deltas.std(),
         }
+
+        # ── Iteration trend ───────────────────────────────────────────
+        # Shape: (num_iterations-1, num_samples)
+        iter_deltas   = np.diff(all_iters, axis=0)
+        signs         = np.sign(iter_deltas)
+        sign_changes  = (np.diff(signs, axis=0) != 0).sum(axis=0)  # (num_samples,)
+        positive_steps = (iter_deltas > 0).sum(axis=0)
+        negative_steps = (iter_deltas < 0).sum(axis=0)
+        # Trend score ∈ [-1, +1]: +1 = monotone increasing, 0 = oscillating, -1 = monotone decreasing
+        trend_score   = signs.mean(axis=0)
         
         # At least one positive step rate: percentage of samples that had at least one positive step across iterations
         at_least_one_positive = (iter_deltas > 0).any(axis=0)  # (num_samples,)
@@ -485,16 +495,6 @@ class LoraEvaluator:
         self.tracker.log({
             "per_sample/never_positive_rate": never_positive
         })
-
-        # ── Iteration trend ───────────────────────────────────────────
-        # Shape: (num_iterations-1, num_samples)
-        iter_deltas   = np.diff(all_iters, axis=0)
-        signs         = np.sign(iter_deltas)
-        sign_changes  = (np.diff(signs, axis=0) != 0).sum(axis=0)  # (num_samples,)
-        positive_steps = (iter_deltas > 0).sum(axis=0)
-        negative_steps = (iter_deltas < 0).sum(axis=0)
-        # Trend score ∈ [-1, +1]: +1 = monotone increasing, 0 = oscillating, -1 = monotone decreasing
-        trend_score   = signs.mean(axis=0)
 
         iter_trend_metrics = {
             "iter_trend/mean_positive_steps":    positive_steps.mean(),
