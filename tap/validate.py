@@ -194,6 +194,8 @@ def get_la(dataset, val_fold_idx, **kwargs):
             2: "checkpoints/la/pascal/model_fold2_djgh9s86.safetensors",
             3: "checkpoints/la/pascal/model_fold3_g31z1tm3.safetensors",
         }[val_fold_idx]
+        la_params["class_attention"] = False
+        la_params["example_class_attention"] = False
 
     
     image_size = 480
