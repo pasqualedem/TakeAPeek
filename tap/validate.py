@@ -177,14 +177,25 @@ def set_batchnorm_dropout_eval_mode(model):
             module.deterministic = True
             module.training = False
 
-def get_la(val_fold_idx, **kwargs):
+def get_la(dataset, val_fold_idx, **kwargs):
     name = "lam_mae_b"
-    path = {
-        0: "checkpoints/la/mae256_fold0_sgqsatyi.safetensors",
-        1: "checkpoints/la/mae256_fold1_p470zqp0.safetensors",
-        2: "checkpoints/la/mae256_fold2_d2exzuiv.safetensors",
-        3: "checkpoints/la/mae256_fold3_y04k97k7.safetensors",
-    }[val_fold_idx]
+    
+    if dataset == "coco":
+        path = {
+            0: "checkpoints/la/mae256_fold0_sgqsatyi.safetensors",
+            1: "checkpoints/la/mae256_fold1_p470zqp0.safetensors",
+            2: "checkpoints/la/mae256_fold2_d2exzuiv.safetensors",
+            3: "checkpoints/la/mae256_fold3_y04k97k7.safetensors",
+        }[val_fold_idx]
+    elif dataset == "pascal":
+        path = {
+            0: "checkpoints/la/pascal/model_fold0_u4ypi8a8.safetensors",
+            1: "checkpoints/la/pascal/model_fold1_hufeobgi.safetensors",
+            2: "checkpoints/la/pascal/model_fold2_djgh9s86.safetensors",
+            3: "checkpoints/la/pascal/model_fold3_g31z1tm3.safetensors",
+        }[val_fold_idx]
+
+    
     image_size = 480
     model = model_registry[name](**la_params)
     weights = torch_dict_load(path)
