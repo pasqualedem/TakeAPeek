@@ -83,7 +83,7 @@ pred   = logits.argmax(dim=1)    # (B, H, W)
 
 ### Interactive demo
 
-Open [`demo_dcama_2way.ipynb`](demo_dcama_2way.ipynb) for a self-contained walkthrough.  
+Open [`demo.ipynb`](demo.ipynb) for a self-contained walkthrough.  
 **Part 1** loads a pre-saved episode from `assets/episode/episode.pt` and runs TaP without any dataset download — only the DCAMA checkpoints are needed.  
 **Part 2** shows how to sample new episodes from COCO and save them.
 
