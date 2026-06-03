@@ -17,7 +17,7 @@
 
 ## Overview
 
-![Take a Peek overview](assets/TaP.pdf)
+![Take a Peek overview](assets/TaP.png)
 
 **Take a Peek (TaP)** is a lightweight, model-agnostic method that enhances encoder adaptability for few-shot semantic segmentation (FSS) and cross-domain FSS. Rather than modifying the decoder — as most prior work does — TaP briefly fine-tunes the encoder on the support set at inference time using **Low-Rank Adaptation (LoRA)**, inducing a targeted feature-space shift conditioned on the current episode.
 
@@ -25,17 +25,135 @@ Key properties:
 - **Model-agnostic**: plugs into any encoder-decoder FSS pipeline without modifying the decoder.
 - **Efficient**: updates only a small fraction of parameters (e.g., 3.08M at rank 2⁶ for DCAMA).
 - **Effective**: consistently improves mIoU across COCO 20ⁱ, Pascal 5ⁱ, and cross-domain benchmarks (DeepGlobe, ISIC, Chest X-ray).
-- **Catastrophic forgetting-aware**: low-rank updates preserve the encoder's pretrained generalization.
+- **Catastrophic forgetting-aware**: low-rank updates preserve the encoder's pretrained generalisation.
 
-## Getting Started
+---
+
+## Quickstart
+
+### Installation
+
+TaP has a **tiered dependency model**. Install only what you need:
+
+```bash
+# Core — TakeAPeek inference only (torch, torchvision, peft, einops, transformers)
+pip install .
+
+# + interactive demo notebook
+pip install ".[demo]"
+
+# + full evaluation pipeline (datasets, wandb, albumentations, mmcv, …)
+pip install ".[eval]"
+```
+
+With [uv](https://github.com/astral-sh/uv) (recommended for reproducibility):
+
+```bash
+uv sync          # full environment from uv.lock
+source .venv/bin/activate
+```
+
+### Using TakeAPeek with your own FSS model
+
+```python
+from peft import LoraConfig
+from tap import TakeAPeek
+
+# 1. Wrap your model
+tap = TakeAPeek(
+    model=your_fss_model,
+    lora_config=LoraConfig(
+        r=64,
+        lora_alpha=64.0,
+        target_modules=["query", "value"],  # adjust to your encoder
+        lora_dropout=0.1,
+        bias="none",
+    ),
+    num_iterations=8,   # outer adaptation loops (T in the paper)
+    lr=1e-3,
+    device="cuda",
+)
+
+# 2. Run adaptation + inference on one episode
+logits = tap(batch, gt)          # (B, C, H, W)
+pred   = logits.argmax(dim=1)    # (B, H, W)
+```
+
+`TakeAPeek` is stateless across episodes — LoRA parameters are re-initialised from scratch on every call.
+
+### Interactive demo
+
+Open [`demo_dcama_2way.ipynb`](demo_dcama_2way.ipynb) for a self-contained walkthrough.  
+**Part 1** loads a pre-saved episode from `assets/episode/episode.pt` and runs TaP without any dataset download — only the DCAMA checkpoints are needed.  
+**Part 2** shows how to sample new episodes from COCO and save them.
+
+---
+
+## Model interface
+
+`TakeAPeek` is model-agnostic: it wraps any FSS model that follows the interface below.
+
+### Input — batch dictionary
+
+| Key | Shape | dtype | Description |
+|---|---|---|---|
+| `"images"` | `(B, M, 3, H, W)` | float32 | All episode images. Index `0` is the query; indices `1…M-1` are the `N×K` support images (N classes, K shots each). |
+| `"prompt_masks"` | `(B, N×K, C, Hm, Wm)` | float32 | Binary segmentation masks for each support image, one channel per class (including background at index 0). |
+| `"flag_masks"` | `(B, N×K, C)` | bool | Validity flag per support mask channel. |
+| `"flag_examples"` | `(B, N×K, C)` | bool | `[b, m, c]` is True when support image `m` belongs to class `c`. Used by the model to route each support image to the right class head. |
+| `"dims"` | `(B, M, 2)` | int64 | Original `(H, W)` of each image before padding — needed by the model to upsample logits to the correct output resolution. |
+| `"classes"` | `list[list[int]]` | — | Nested list `[batch][image]` of class IDs present in each image. |
+
+`M = 1 + N × K`. The support keys (`prompt_masks`, `flag_masks`, `flag_examples`) cover only the `N×K` support images, not the query.
+
+### Input — ground-truth tensor
+
+```
+gt : (B, M, H', W')  int64
+```
+
+`gt[:, 0]` is the query ground truth (used only as a placeholder during adaptation — never for optimisation). `gt[:, 1:]` are the support ground truths that supervise the adaptation loss. Padding pixels are filled with `-100` (ignored by the loss).
+
+### Output
+
+```python
+result = model(batch)
+# result["logits"]: (B, C, H', W')  float32
+```
+
+The model must return a dict with at least a `"logits"` key. Any additional keys (e.g., `"query_feats"`, `"support_feats"`) are silently ignored by TaP.
+
+### Minimal model skeleton
+
+```python
+import torch.nn as nn
+from tap.utils.utils import ResultDict   # "logits" string constant
+
+class MyFSSModel(nn.Module):
+    def forward(self, batch: dict) -> dict:
+        images        = batch["images"]         # (B, M, 3, H, W)
+        prompt_masks  = batch["prompt_masks"]   # (B, N*K, C, Hm, Wm)
+        flag_examples = batch["flag_examples"]  # (B, N*K, C)
+        dims          = batch["dims"]           # (B, M, 2)
+
+        query   = images[:, :1]    # (B, 1, 3, H, W)
+        support = images[:, 1:]    # (B, N*K, 3, H, W)
+
+        logits = ...               # (B, C, H', W')
+
+        return {ResultDict.LOGITS: logits}
+```
+
+---
+
+## Getting Started (full evaluation)
 
 ### Environment
 
-Install dependencies with [uv](https://github.com/astral-sh/uv):
-
 ```bash
-uv sync
-source .venv/bin/activate
+pip install ".[eval]"
+# or with uv:
+uv sync && source .venv/bin/activate
 ```
 
 ### Datasets
@@ -60,7 +178,7 @@ mv train2017 train_val_2017
 rm -rf val2017
 ```
 
-Rename image filenames in the COCO 2014 annotations:
+Rename filenames in the COCO 2014 annotations to match the merged directory:
 
 ```bash
 python preprocess.py rename_coco20i_json --instances_path data/coco/annotations/instances_train2014.json
@@ -141,13 +259,15 @@ checkpoints/
 └── dmtnet.pt
 ```
 
-## Running Experiments
+### Running Experiments
 
-All experiment configurations are in the `parameters/` folder. See [`scripts.sh`](scripts.sh) for the full list of commands.
+All configurations are in the `parameters/` folder. See [`scripts.sh`](scripts.sh) for the full list of commands.
 
 ```bash
 python main.py --experiment_file=parameters/<filename> --sequential
 ```
+
+---
 
 ## Results
 
@@ -163,9 +283,9 @@ TaP consistently improves segmentation performance across models and benchmarks.
 
 On cross-domain benchmarks with DMTNet (15-shot): **+4.55** on DeepGlobe, **+4.97** on ISIC, **+20.65** on Chest X-ray.
 
-## Citation
+---
 
-If you use this work, please cite:
+## Citation
 
 ```bibtex
 @article{demarinis2026takeapeek,

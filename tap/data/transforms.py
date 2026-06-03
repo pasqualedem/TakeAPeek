@@ -3,14 +3,12 @@ from torchvision.transforms.functional import resize
 from PIL import Image
 import torch
 import torch.nn.functional as F
-from pycocotools import mask as mask_utils
 import numpy as np
 from copy import deepcopy
 from typing import Tuple
 from tap.data.utils import get_preprocess_shape
 from torchvision.transforms import Normalize as Norm
 from torchvision.transforms import Resize
-from skimage.segmentation import slic
 
 class CustomResize(object):
     def __init__(self, long_side_length: int = 1024):
@@ -80,6 +78,7 @@ class PromptsProcessor:
             h (int): image height
             w (int): image width
         """
+        from pycocotools import mask as mask_utils
         segm = ann
         if isinstance(segm, list):
             # polygon -- a single object might consist of multiple parts
@@ -132,6 +131,7 @@ class PromptsProcessor:
         Returns:
             binary mask (numpy 2D array)
         """
+        from pycocotools import mask as mask_utils
         rle = self.__ann_to_rle(mask, h, w)
         matrix = mask_utils.decode(rle)
         # if matrix is made by all zeros
@@ -253,6 +253,7 @@ class SuperpixelMaskPerturbator:
             img_np = img_tensor.cpu().numpy().transpose(1, 2, 0)
 
             # 2. Generate superpixels (computed once per image, reused for all classes)
+            from skimage.segmentation import slic
             segments = slic(img_np, n_segments=self.n_segments, compactness=self.compactness, start_label=1)
             segments_tensor = torch.from_numpy(segments).to(perturbed_mask.device)
 

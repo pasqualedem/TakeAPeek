@@ -1,22 +1,32 @@
 [project]
 name = "takeapeek"
 version = "0.1.0"
-description = "Take a Peek"
+description = "Take a Peek: Efficient Encoder Adaptation for Few-Shot Semantic Segmentation via LoRA"
 readme = "README.md"
 requires-python = ">=3.11"
+
+# Minimal dependencies — enough to import TakeAPeek and run inference.
 dependencies = [
+    "einops>=0.8.1",
+    "peft>=0.15.2",
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
+    "transformers>=4.51.3",
+]
+
+[project.optional-dependencies]
+# Full evaluation pipeline: datasets, logging, distributed training.
+eval = [
+    "accelerate",
     "albumentations>=2.0.8",
     "click>=8.1.8",
     "dropblock>=0.3.0",
     "easydict>=1.13",
-    "einops>=0.8.1",
     "gdown>=5.2.0",
     "imageio>=2.37.0",
     "lovely-tensors>=0.1.18",
-    "notebook>=7.4.5",
     "opencv-python>=4.13.0.92",
     "pandas>=2.3.2",
-    "peft>=0.15.2",
     "pycocotools>=2.0.8",
     "ruamel-yaml>=0.18.10",
     "scikit-image>=0.26.0",
@@ -24,10 +34,15 @@ dependencies = [
     "seaborn>=0.13.2",
     "tabulate>=0.10.0",
     "timm>=1.0.15",
-    "torch>=2.6.0",
     "torchaudio>=2.6.0",
     "torchmetrics>=1.7.1",
-    "torchvision>=0.21.0",
-    "transformers>=4.51.3",
     "wandb==0.18.7",
+]
+# Interactive demo notebook.
+demo = [
+    "matplotlib",
+    "notebook>=7.4.5",
+    "Pillow",
+    "peft>=0.15.2",
+    "torchmetrics>=1.7.1",
 ]

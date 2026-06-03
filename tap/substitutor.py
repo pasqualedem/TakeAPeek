@@ -4,7 +4,6 @@ import torch
 
 from einops import rearrange
 
-from tap.data.transforms import PromptsProcessor
 from tap.data.utils import BatchKeys
 
 
@@ -213,9 +212,6 @@ class Substitutor:
         self.it = 0
         self.query_iteration = True
         self.subsample = subsample
-        self.prompt_processor = PromptsProcessor(
-            long_side_length=long_side_length, custom_preprocess=custom_preprocess
-        )
         self.augment = augment
         self.k_augmented = k_augmented
 
