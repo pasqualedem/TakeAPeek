@@ -11,8 +11,6 @@ import torchvision
 from transformers import ViTMAEForPreTraining
 from tqdm import tqdm
 
-from mmengine.utils.dl_utils.parrots_wrapper import SyncBatchNorm
-
 import yaml
 from tap.adapters import PEFT_CONFIGS, get_peft_config, get_peft_model
 from tap.loss import FSSLoss
@@ -154,6 +152,8 @@ la_params = {
 }
 
 def set_batchnorm_dropout_eval_mode(model):
+    from mmengine.utils.dl_utils.parrots_wrapper import SyncBatchNorm
+    
     for module in model.modules():
         if isinstance(module, (nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d)):
             module.eval()

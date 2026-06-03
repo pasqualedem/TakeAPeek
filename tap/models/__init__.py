@@ -7,8 +7,15 @@
 
 from collections import namedtuple
 
-from .bam import build_bam
-from .hdmnet import build_hdmnet
+def build_bam(*args, **kwargs):
+    from .bam import build_bam as _build_bam
+    return _build_bam(*args, **kwargs)
+
+
+def build_hdmnet(*args, **kwargs):
+    from .hdmnet import build_hdmnet as _build_hdmnet
+    return _build_hdmnet(*args, **kwargs)
+
 from .la.build_lam import build_lam, build_lam_no_vit, build_lam_vit_mae_b, build_multilevel_lam, build_lam_vit_b_imagenet_i21k, build_lam_dino_b8, build_lam_vit_h, build_lam_vit_l, build_lam_vit_b
 from .la.build_encoder import ENCODERS, build_vit_b, build_vit_h, build_vit_l
 from .dcama import build_dcama
