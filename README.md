@@ -289,7 +289,7 @@ On cross-domain benchmarks with DMTNet (15-shot): **+4.55** on DeepGlobe, **+4.9
 
 ```bibtex
 
-@misc{marinisTakePeekEfficient2025,
+@article{marinisTakePeekEfficient2025,
 	title = {Take a {Peek}: {Efficient} {Encoder} {Adaptation} for {Few}-{Shot} {Semantic} {Segmentation} via {LoRA}},
 	shorttitle = {Take a {Peek}},
 	url = {http://arxiv.org/abs/2512.10521},
