@@ -1,22 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#1a6fa8"/>
       <stop offset="100%" stop-color="#0d4d7a"/>
     </linearGradient>
-    <clipPath id="clip">
-      <rect width="32" height="32" rx="7"/>
-    </clipPath>
+    <clipPath id="round"><rect width="32" height="32" rx="7"/></clipPath>
+    <clipPath id="above"><rect x="0" y="0" width="32" height="20"/></clipPath>
   </defs>
-  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
-  <g clip-path="url(#clip)">
-    <!-- eye whites -->
-    <path d="M2 16 C7 8, 25 8, 30 16 C25 24, 7 24, 2 16 Z" fill="white"/>
-    <!-- iris -->
-    <circle cx="16" cy="16" r="5.5" fill="#0d4d7a"/>
-    <!-- pupil -->
-    <circle cx="16" cy="16" r="2.8" fill="#1a1a2e"/>
-    <!-- specular highlight -->
-    <circle cx="18.2" cy="13.8" r="1.4" fill="white" opacity="0.85"/>
+
+  <g clip-path="url(#round)">
+    <!-- background -->
+    <rect width="32" height="32" fill="url(#sky)"/>
+    <!-- wall being peeked over -->
+    <rect x="0" y="19" width="32" height="13" fill="#061e2f"/>
+    <!-- wall top edge highlight -->
+    <rect x="0" y="18.5" width="32" height="1.5" fill="#2a8acc"/>
+    <!-- eye centered on wall edge; clip hides the lower half -->
+    <g clip-path="url(#above)">
+      <path d="M2 19 C7 10, 25 10, 30 19 C25 28, 7 28, 2 19 Z" fill="white"/>
+      <circle cx="16" cy="19" r="5.2" fill="#0d4d7a"/>
+      <circle cx="16" cy="19" r="2.6" fill="#07111d"/>
+      <circle cx="18.2" cy="16.8" r="1.3" fill="white" opacity="0.88"/>
+    </g>
   </g>
 </svg>
