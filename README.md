@@ -288,14 +288,20 @@ On cross-domain benchmarks with DMTNet (15-shot): **+4.55** on DeepGlobe, **+4.9
 ## Citation
 
 ```bibtex
-@article{demarinis2026takeapeek,
-  title     = {Take a Peek: Efficient Encoder Adaptation for Few-Shot Semantic Segmentation via LoRA},
-  author    = {De Marinis, Pasquale and Castellano, Giovanna and Vessio, Gennaro},
-  journal   = {Pattern Recognition Letters},
-  year      = {2026},
-  note      = {In press},
-  url       = {https://arxiv.org/abs/2512.10521}
+
+@misc{marinisTakePeekEfficient2025,
+	title = {Take a {Peek}: {Efficient} {Encoder} {Adaptation} for {Few}-{Shot} {Semantic} {Segmentation} via {LoRA}},
+	shorttitle = {Take a {Peek}},
+	url = {http://arxiv.org/abs/2512.10521},
+	doi = {10.48550/arXiv.2512.10521},
+	publisher = {arXiv},
+	author = {Marinis, Pasquale De and Vessio, Gennaro and Castellano, Giovanna},
+	month = dec,
+	year = {2025},
+	note = {arXiv:2512.10521 [cs]},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
 }
+
 ```
 
 ## Acknowledgements
