@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Take a Peek — FSS via LoRA</title>
+  <meta name="description" content="Take a Peek (TaP): efficient encoder adaptation for few-shot semantic segmentation via LoRA. Pattern Recognition Letters, 2026."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+  <!-- Plotly for t-SNE scatter plots -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
+  <!-- MathJax for the LoRA equation -->
+  <script>window.MathJax={tex:{inlineMath:[['$','$']]},svg:{fontCache:'global'}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" defer></script>
+</head>
+<body>
+
+<!-- ── Navigation ──────────────────────────────────────────────────────────── -->
+<nav>
+  <div class="inner">
+    <span class="logo">Take a Peek</span>
+    <a href="#abstract">Abstract</a>
+    <a href="#method">Method</a>
+    <a href="#shift">Feature Shift</a>
+    <a href="#results">Results</a>
+    <a href="#citation">Cite</a>
+  </div>
+</nav>
+
+<!-- ── Hero ────────────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="container">
+    <div class="fade-up">
+      <span class="venue">Pattern Recognition Letters · In Press</span>
+    </div>
+    <h1 class="fade-up fade-up-1">
+      Take a <span>Peek</span><br>
+      <span style="font-size:0.55em;font-weight:600;color:var(--muted)">
+        Efficient Encoder Adaptation for Few-Shot Semantic Segmentation via LoRA
+      </span>
+    </h1>
+    <p class="authors fade-up fade-up-2">
+      Pasquale De Marinis &nbsp;·&nbsp; Gennaro Vessio &nbsp;·&nbsp; Giovanna Castellano
+    </p>
+    <p class="affil fade-up fade-up-2">
+      Department of Computer Science, University of Bari Aldo Moro, Italy
+    </p>
+    <div class="badges fade-up fade-up-3">
+      <a class="badge" href="https://arxiv.org/abs/2512.10521" target="_blank">
+        <img src="https://img.shields.io/badge/arXiv-2512.10521-b31b1b.svg" alt="arXiv"/>
+        arXiv
+      </a>
+      <a class="badge" href="https://github.com/pasqualedem/TakeAPeek" target="_blank">
+        <svg height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        Code
+      </a>
+      <a class="badge" href="" target="_blank">
+        📄 Paper
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Abstract ─────────────────────────────────────────────────────────────── -->
+<section id="abstract">
+  <div class="container">
+    <span class="section-label">Abstract</span>
+    <h2>Adapting the Encoder, Not Just the Decoder</h2>
+    <div class="card">
+      <p>
+        Few-shot semantic segmentation (FSS) aims to segment novel classes in query images
+        using only a small annotated support set. While prior research has mainly focused on
+        improving decoders, the encoder's limited ability to extract meaningful features for
+        unseen classes remains a key bottleneck. In this work, we introduce
+        <strong>Take a Peek (TaP)</strong>, a simple yet effective method that enhances
+        encoder adaptability for both FSS and cross-domain FSS by inducing a lightweight
+        <em>feature-space shift</em> conditioned on the support set.
+      </p>
+      <br>
+      <p>
+        TaP leverages <strong>Low-Rank Adaptation (LoRA)</strong> to fine-tune the encoder
+        on the support set with minimal computational overhead, enabling fast adaptation to
+        novel classes while mitigating catastrophic forgetting. Our method is
+        <strong>model-agnostic</strong> and can be seamlessly integrated into existing FSS
+        pipelines. Extensive experiments across multiple benchmarks — including
+        COCO&nbsp;20<sup>i</sup>, Pascal&nbsp;5<sup>i</sup>, and cross-domain datasets
+        (DeepGlobe, ISIC, Chest X-ray) — demonstrate that TaP consistently improves
+        segmentation performance across diverse models and shot settings.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── Overview figure ──────────────────────────────────────────────────────── -->
+<section id="overview">
+  <div class="container">
+    <span class="section-label">Overview</span>
+    <h2>How TaP Works</h2>
+    <figure>
+      <img src="TaP.png" alt="Take a Peek overview diagram"/>
+      <figcaption>
+        Each support image is temporarily treated as a query during adaptation, and its mask
+        supervises a forward-backward pass. Only the LoRA adapter modules are updated.
+        At inference, the adapted encoder processes the query image while the decoder
+        remains unchanged.
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ── Method ───────────────────────────────────────────────────────────────── -->
+<section id="method">
+  <div class="container">
+    <span class="section-label">Method</span>
+    <h2>The Frozen Encoder Problem — and How TaP Solves It</h2>
+
+    <div class="method-body">
+
+      <!-- Left: prose -->
+      <div class="method-prose">
+        <p>
+          Most FSS models freeze the encoder, adapting only the decoder.
+          This leaves a critical gap: a pretrained encoder cannot discriminate
+          novel classes it has never seen, regardless of how good the decoder is.
+        </p>
+        <p style="margin-top:14px">
+          TaP fixes this at inference time. LoRA adapters fine-tune the
+          encoder on the support set via the <strong>substitution strategy</strong> —
+          each support image briefly acts as a pseudo-query, supervised by the others.
+          The decoder is never touched; the encoder simply arrives better prepared.
+        </p>
+      </div>
+
+      <!-- Right: key concepts -->
+      <div class="method-concepts">
+        <div class="concept-card fade-up">
+          <span class="concept-icon">🔒</span>
+          <div>
+            <h3>Decoder stays frozen</h3>
+            <p>No decoder modification — TaP plugs into any existing FSS model
+            without retraining.</p>
+          </div>
+        </div>
+        <div class="concept-card fade-up fade-up-1">
+          <span class="concept-icon">⚡</span>
+          <div>
+            <h3>LoRA keeps it efficient</h3>
+            <p>Only $A$ and $B$ in $W' = W + \alpha AB$ are trained.
+            The base weights never change.</p>
+          </div>
+        </div>
+        <div class="concept-card fade-up fade-up-2">
+          <span class="concept-icon">🔄</span>
+          <div>
+            <h3>Substitution provides supervision</h3>
+            <p>Known support images act as pseudo-queries, giving a free
+            training signal without any extra labelled data.</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .method-body -->
+
+  </div>
+</section>
+
+<!-- ── Substitution Animation ───────────────────────────────────────────────── -->
+<section id="substitution">
+  <div class="container">
+    <span class="section-label">Adaptation Loop</span>
+    <h2>The Substitution Strategy</h2>
+    <p>
+      Each of the N&times;K support images takes a turn as a <em>pseudo-query</em>.
+      Its ground-truth mask supervises a forward&ndash;backward pass; only the LoRA adapters
+      are updated, leaving the base encoder and decoder weights untouched.
+    </p>
+
+    <div class="sub-demo">
+
+      <!-- ── Support-card grid ─────────────────────────────────────── -->
+      <div class="sub-grid">
+        <div class="sub-class-col" id="col-a">
+          <div class="sub-class-label a">Class A</div>
+          <div class="sub-cards" id="cards-a"></div>
+        </div>
+        <div class="sub-divider"></div>
+        <div class="sub-class-col" id="col-b">
+          <div class="sub-class-label b">Class B</div>
+          <div class="sub-cards" id="cards-b"></div>
+        </div>
+      </div>
+
+      <!-- ── Diagram ───────────────────────────────────────────────── -->
+      <div class="sub-diagram">
+
+        <svg class="sub-svg" id="sub-svg" aria-hidden="true">
+          <!-- forward arrows (drawn by JS) -->
+          <defs>
+            <marker id="arr-fwd" markerWidth="6" markerHeight="6"
+                    refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6 Z" fill="#1a6fa8"/>
+            </marker>
+            <marker id="arr-bwd" markerWidth="6" markerHeight="6"
+                    refX="1" refY="3" orient="auto-start-reverse">
+              <path d="M6,0 L0,3 L6,6 Z" fill="#e74c3c"/>
+            </marker>
+          </defs>
+        </svg>
+
+        <!-- nodes -->
+        <div class="dn pq-dn" id="dn-pq">
+          <div class="dn-card" id="pq-card-diag"></div>
+          <div class="dn-label">Pseudo-query</div>
+        </div>
+
+        <div class="dn ctx-dn" id="dn-ctx">
+          <div class="ctx-mini-row" id="ctx-mini"></div>
+          <div class="dn-label">Context support</div>
+        </div>
+
+        <div class="dn enc-dn" id="dn-enc">
+          <div class="enc-inner">
+            <span class="enc-title">Encoder</span>
+            <span class="lora-chip" id="lora-chip">LoRA 🔥</span>
+          </div>
+        </div>
+
+        <div class="dn dec-dn" id="dn-dec">
+          <span>Decoder ❄️</span>
+        </div>
+
+        <div class="dn loss-dn" id="dn-loss">
+          <span>Focal Loss</span>
+        </div>
+      </div>
+
+      <!-- ── Phase indicator ───────────────────────────────────────── -->
+      <div class="sub-phases">
+        <div class="sub-phase" id="ph-select">
+          <div class="ph-dot"></div><span>Select pseudo-query</span>
+        </div>
+        <div class="sub-phase" id="ph-forward">
+          <div class="ph-dot"></div><span>Forward pass</span>
+        </div>
+        <div class="sub-phase" id="ph-loss">
+          <div class="ph-dot"></div><span>Compute loss</span>
+        </div>
+        <div class="sub-phase" id="ph-back">
+          <div class="ph-dot"></div><span>Backprop → LoRA</span>
+        </div>
+      </div>
+
+      <!-- ── Iteration counter ─────────────────────────────────────── -->
+      <div class="sub-counter">
+        Step <span id="sub-step">1</span> / <span id="sub-total">10</span>
+        &nbsp;·&nbsp; Outer iteration <span id="sub-iter">1</span> / T
+      </div>
+
+    </div><!-- .sub-demo -->
+  </div>
+</section>
+
+<!-- ── Feature-Space Shift ──────────────────────────────────────────────────── -->
+<section id="shift">
+  <div class="container">
+    <span class="section-label">Qualitative Analysis</span>
+    <h2>Feature-Space Shift Across Iterations</h2>
+    <p>
+      As TaP adapts the encoder, pixel-level features from the query and support images
+      progressively separate by class in the embedding space. The animation below shows
+      the encoder output (last Swin-B scale, 1024&nbsp;d, projected to 2D via
+      t-SNE) and the corresponding segmentation prediction at each adaptation step.
+    </p>
+
+    <!-- Loading state -->
+    <div id="shift-loading">
+      <div class="spinner"></div>
+      <p class="load-msg">Loading feature-shift data…</p>
+    </div>
+
+    <!-- Player (hidden until data loads) -->
+    <div id="shift-player" style="display:none">
+      <div class="player">
+        <div class="player-header">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
+               viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <h3>Encoder Feature-Space Evolution</h3>
+        </div>
+        <div class="player-body">
+          <div class="iter-label">
+            <span id="iter-label-text">Before adaptation</span>
+            <span class="pill" id="iter-label-pill">Baseline</span>
+          </div>
+
+          <!-- t-SNE: full width -->
+          <div id="tsne-plot"></div>
+
+          <!-- Images: three-column strip below the plot -->
+          <div class="viz-images">
+            <div class="viz-img-item">
+              <div class="img-label">Query image</div>
+              <img id="img-query" alt="Query image"/>
+            </div>
+            <div class="viz-img-item">
+              <div class="img-label">Prediction</div>
+              <img id="img-pred" alt="Prediction"/>
+            </div>
+            <div class="viz-img-item">
+              <div class="img-label">Ground truth</div>
+              <img id="img-query-gt" alt="Query GT"/>
+            </div>
+          </div>
+
+          <!-- Separation score -->
+          <div class="score-bar">
+            <div class="score-bar-label" id="score-text">Class separation score: —</div>
+            <div class="score-track"><div class="score-fill" id="score-fill" style="width:0%"></div></div>
+          </div>
+
+          <!-- Controls -->
+          <div class="controls">
+            <button class="btn-play" id="btn-play">▶ Play</button>
+            <div class="slider-wrap">
+              <label for="iter-slider">Adaptation iteration</label>
+              <input type="range" id="iter-slider" min="0" max="7" value="0"/>
+            </div>
+          </div>
+
+          <!-- Iteration dots -->
+          <div class="iter-dots" id="iter-dots"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Demo comparison ──────────────────────────────────────────────────────── -->
+<section id="demo">
+  <div class="container">
+    <span class="section-label">Visual Comparison</span>
+    <h2>Before and After TaP Adaptation</h2>
+    <p>2-way 3-shot episode on COCO&nbsp;20<sup>i</sup> — DCAMA with Swin-B backbone.</p>
+    <div class="comparison-grid">
+      <div class="cmp-item">
+        <img src="episode/query.png"   alt="Query image"/>
+        <span>Query Image</span>
+      </div>
+      <div class="cmp-item">
+        <img src="episode/query_vanilla.png" alt="Vanilla prediction"/>
+        <span>Vanilla (no TaP)</span>
+      </div>
+      <div class="cmp-item">
+        <img src="episode/query_tap.png"     alt="TaP prediction"/>
+        <span>With TaP</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Results ──────────────────────────────────────────────────────────────── -->
+<section id="results">
+  <div class="container">
+    <span class="section-label">Experimental Results</span>
+    <h2>Consistent Gains Across Models &amp; Benchmarks</h2>
+    <p>
+      All results are averaged over 5 runs × 1000 episodes.
+      TaP is compared against the vanilla baseline (frozen encoder), Decoder FT, and AdaptiveFSS.
+    </p>
+
+    <div class="result-cards">
+      <div class="result-card">
+        <div class="model">BAM · COCO 2-way</div>
+        <div class="number green counter" data-target="8.33">+0.00%</div>
+        <div class="desc">mIoU improvement, 5-shot</div>
+      </div>
+      <div class="result-card">
+        <div class="model">DCAMA · Pascal 2-way</div>
+        <div class="number green counter" data-target="10.30">+0.00%</div>
+        <div class="desc">mIoU improvement, 5-shot</div>
+      </div>
+      <div class="result-card">
+        <div class="model">DMTNet · Chest X-ray</div>
+        <div class="number green counter" data-target="20.65">+0.00%</div>
+        <div class="desc">mIoU improvement, 15-shot</div>
+      </div>
+      <div class="result-card">
+        <div class="model">Trainable params</div>
+        <div class="number" style="font-size:1.6rem">0.41%</div>
+        <div class="desc">of total (r = 2³ for DCAMA)</div>
+      </div>
+    </div>
+
+    <!-- COCO table -->
+    <div class="results-table">
+      <h3 style="margin:36px 0 12px">COCO 20<sup>i</sup> — mean mIoU improvement over vanilla</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>1-way 5-shot</th>
+            <th>2-way 5-shot</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>BAM</td>          <td class="gain">+7.14</td><td class="gain">+8.33</td></tr>
+          <tr><td>DCAMA</td>        <td class="gain">+1.74</td><td class="gain">+5.44</td></tr>
+          <tr><td>FPTrans</td>      <td class="gain">+0.66</td><td class="gain">+3.96</td></tr>
+          <tr><td>HDMNet</td>       <td class="gain">+1.66</td><td class="gain">+3.97</td></tr>
+          <tr><td>Label Anything</td><td class="gain">+3.32</td><td class="gain">+5.00</td></tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin:32px 0 12px">Cross-Domain FSS (DMTNet) — mean mIoU improvement</h3>
+      <table>
+        <thead>
+          <tr><th>Dataset</th><th>3-shot</th><th>5-shot</th><th>10-shot</th><th>15-shot</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>DeepGlobe</td>  <td class="gain">+1.64</td><td class="gain">+2.42</td><td class="gain">+2.83</td><td class="gain">+4.55</td></tr>
+          <tr><td>ISIC</td>       <td class="gain">+3.26</td><td class="gain">+2.26</td><td class="gain">+4.01</td><td class="gain">+4.97</td></tr>
+          <tr><td>Chest X-ray</td><td class="gain">+13.76</td><td class="gain">+15.95</td><td class="gain">+18.28</td><td class="gain">+20.65</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Citation ─────────────────────────────────────────────────────────────── -->
+<section id="citation">
+  <div class="container">
+    <span class="section-label">Citation</span>
+    <h2>BibTeX</h2>
+    <pre><code id="bibtex">@article{marinisTakePeekEfficient2025,
+	title = {Take a {Peek}: {Efficient} {Encoder} {Adaptation} for {Few}-{Shot} {Semantic} {Segmentation} via {LoRA}},
+	shorttitle = {Take a {Peek}},
+	url = {http://arxiv.org/abs/2512.10521},
+	doi = {10.48550/arXiv.2512.10521},
+	publisher = {arXiv},
+	author = {Marinis, Pasquale De and Vessio, Gennaro and Castellano, Giovanna},
+	month = dec,
+	year = {2025},
+	note = {arXiv:2512.10521 [cs]},
+	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+}</code></pre>
+    <button class="copy-btn" id="copy-btn" onclick="copyBib()">Copy</button>
+  </div>
+</section>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────────── -->
+<footer>
+  <p>
+    © 2026 De Marinis, Vessio, Castellano — University of Bari Aldo Moro ·
+    <a href="https://arxiv.org/abs/2512.10521">arXiv</a> ·
+    <a href="https://github.com/pasqualedem/TakeAPeek">GitHub</a>
+  </p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
