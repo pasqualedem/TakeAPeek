@@ -147,7 +147,9 @@ function renderTSNE(points) {
     transition: { duration: 350, easing: 'cubic-in-out' },
   };
 
-  const config = { displayModeBar: false, responsive: true };
+  const isMobile = window.matchMedia('(max-width: 600px)').matches;
+  const config = { displayModeBar: false, responsive: true,
+                   scrollZoom: false, staticPlot: isMobile };
 
   if (plotEl.data) {
     Plotly.react(plotEl, traces, layout, config);

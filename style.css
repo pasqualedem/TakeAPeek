@@ -122,7 +122,6 @@ nav .logo { font-weight: 700; color: var(--text); margin-right: auto; font-size:
 .viz-img-item .img-label { font-size: 0.72rem; font-weight: 600; color: var(--muted);
                            text-transform: uppercase; letter-spacing: 0.06em;
                            margin-bottom: 5px; }
-@media (max-width: 480px) { .viz-images { grid-template-columns: 1fr; } }
 
 .controls { display: flex; align-items: center; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
 .btn-play  { background: var(--blue); color: #fff; border: none;
@@ -323,6 +322,46 @@ tbody tr:hover td { background: var(--blue-light); }
 footer { padding: 32px 24px; text-align: center; border-top: 1px solid var(--border);
          font-size: 0.83rem; color: var(--muted); }
 footer a { color: var(--blue); text-decoration: none; }
+
+/* ── Mobile (≤ 600 px) ─────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+
+  /* Nav: horizontally scrollable so links are never clipped */
+  nav { padding: 0 12px; }
+  nav .inner {
+    gap: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  nav .inner::-webkit-scrollbar { display: none; }
+  nav a, nav .logo { white-space: nowrap; flex-shrink: 0; }
+
+  /* Substitution diagram: give it more vertical room */
+  .sub-diagram { min-height: 360px; }
+
+  /* Scale down fixed-size thumbnail cards */
+  .dn-card        { width: 40px; height: 40px; }
+  .s-card         { width: 44px; height: 44px; }
+  .ctx-mini-card  { width: 22px; height: 22px; }
+  .ctx-mini-row   { max-width: 100%; flex-direction: column; align-items: center; }
+
+  /* Widen nodes so their content no longer overflows */
+  .pq-dn  { width: 18%; left: 2%; }
+  .ctx-dn { width: 26%; right: 2%; }
+  .enc-dn { width: 32%; }
+  .dec-dn { width: 28%; }
+  .loss-dn{ width: 24%; }
+
+  /* Keep the three viz images aligned even when labels wrap */
+  .viz-img-item .img-label { min-height: 2.4em; }
+
+  /* Shrink diagram text to fit narrower nodes */
+  .dn        { font-size: 0.68rem; }
+  .dn-label  { font-size: 0.58rem; }
+  .enc-title { font-size: 0.78rem; }
+  .lora-chip { font-size: 0.6rem; padding: 2px 7px; }
+}
 
 /* ── Animations ────────────────────────────────────────────────────────────── */
 @keyframes fadeUp { from { opacity:0; transform:translateY(20px); }
