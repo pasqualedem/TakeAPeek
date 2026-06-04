@@ -289,17 +289,13 @@ On cross-domain benchmarks with DMTNet (15-shot): **+4.55** on DeepGlobe, **+4.9
 
 ```bibtex
 
-@article{marinisTakePeekEfficient2025,
+@article{PATREC9849,
 	title = {Take a {Peek}: {Efficient} {Encoder} {Adaptation} for {Few}-{Shot} {Semantic} {Segmentation} via {LoRA}},
 	shorttitle = {Take a {Peek}},
-	url = {http://arxiv.org/abs/2512.10521},
-	doi = {10.48550/arXiv.2512.10521},
-	publisher = {arXiv},
+	journal = {Pattern Recognition Letters},
 	author = {Marinis, Pasquale De and Vessio, Gennaro and Castellano, Giovanna},
-	month = dec,
-	year = {2025},
-	note = {arXiv:2512.10521 [cs]},
-	keywords = {Computer Science - Computer Vision and Pattern Recognition},
+	year = {2026},
+	publisher = {Elsevier},
 }
 
 ```
