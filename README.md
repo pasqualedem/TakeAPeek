@@ -289,13 +289,19 @@ On cross-domain benchmarks with DMTNet (15-shot): **+4.55** on DeepGlobe, **+4.9
 
 ```bibtex
 
-@article{PATREC9849,
-	title = {Take a {Peek}: {Efficient} {Encoder} {Adaptation} for {Few}-{Shot} {Semantic} {Segmentation} via {LoRA}},
-	shorttitle = {Take a {Peek}},
+
+@article{demarinisTakePeekEfficient2026,
+	title = {Take a peek: {Efficient} encoder adaptation for few-shot semantic segmentation via {LoRA}},
+	volume = {207},
+	issn = {0167-8655},
+	shorttitle = {Take a peek},
+	url = {https://www.sciencedirect.com/science/article/pii/S0167865526001996},
+	doi = {10.1016/j.patrec.2026.06.003},
 	journal = {Pattern Recognition Letters},
-	author = {Marinis, Pasquale De and Vessio, Gennaro and Castellano, Giovanna},
+	author = {De Marinis, Pasquale and Vessio, Gennaro and Castellano, Giovanna},
 	year = {2026},
-	publisher = {Elsevier},
+	keywords = {Semantic segmentation, Few-shot learning, LoRA, Deep neural networks, Domain shift},
+	pages = {47--54},
 }
 
 ```
