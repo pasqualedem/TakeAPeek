@@ -3,7 +3,7 @@
 <div align="center">
 
 [![arXiv](https://img.shields.io/badge/arXiv-2512.10521-b31b1b.svg)](https://arxiv.org/abs/2512.10521)
-[![Pattern Recognition Letters](https://img.shields.io/badge/Pattern%20Recognition%20Letters-In%20Press-blue)](https://arxiv.org/abs/2512.10521)
+[![Pattern Recognition Letters](https://img.shields.io/badge/Pattern%20Recognition%20Letters-In%20Press-blue)](https://doi.org/10.1016/j.patrec.2026.06.003)
 
 **Pasquale De Marinis, Gennaro Vessio, Giovanna Castellano**  
 *Department of Computer Science, University of Bari Aldo Moro, Bari, Italy*
@@ -12,7 +12,7 @@
 
 ---
 
-> **Paper accepted to *Pattern Recognition Letters* (in press).**  
+> **Paper accepted to *Pattern Recognition Letters***  
 > Preprint available on [arXiv:2512.10521](https://arxiv.org/abs/2512.10521).
 
 ## Overview
